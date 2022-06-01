@@ -1,0 +1,9 @@
+.vscode/
+.notes/
+.idea/
+.DS_Store
+openapi/
+.terraform*
+
+terraform-provider-contabo*
+examples/main.tf

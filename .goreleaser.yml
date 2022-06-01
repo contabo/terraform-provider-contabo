@@ -1,0 +1,63 @@
+project_name: terraform-provider-contabo
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+builds:
+- env:
+    - CGO_ENABLED=0
+  mod_timestamp: '{{ .CommitTimestamp }}'
+  flags:
+    - -trimpath
+  ldflags:
+      - -w -s -X contabo.com/terraform-provider-contabo/cmd.version={{.Tag}} -X contabo.com/terraform-provider-contabo/cmd.commit={{.Commit}} -X contabo.com/terraform-provider-contabo/cmd.date={{.Date}}
+  goos:
+    - linux
+    - windows
+    - darwin
+  goarch:
+    - amd64
+    - arm64
+  ignore:
+    - goos: windows
+      goarch: arm64
+  binary: '{{ .ProjectName }}_v{{ .Version }}'
+archives:
+  - name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      amd64: x86_64
+    files:
+      - README.md
+      - LICENSE
+checksum:
+  name_template: 'checksums.txt'
+signs:
+  - artifacts: checksum
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+changelog:
+  skip: true
+release:
+  github:
+    owner: contabo
+    name: terraform-provider-contabo
+  extra_files:
+    - glob: 'terraform-registry-manifest.json'
+      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
+  draft: false
+  prerelease: auto
+  header: |
+
+  footer: |

@@ -1,0 +1,64 @@
+terraform {
+  required_providers {
+    contabo = {
+      source = "contabo/contabo"
+      version = "v0.1.0"
+    }
+  }
+}
+
+# you can configure your Contabo API credentials in provider stanza
+#
+# ```
+# provider "contabo" {
+#   oauth2_client_id = "[your client id]"
+#   oauth2_client_secret = "[your client secret]"
+#   oauth2_user = "[your username]"
+#   oauth2_pass = "[your password]"
+# }
+# ```
+
+# or set the following environment variables:
+# CNTB_OAUTH2_CLIENT_ID
+# CNTB_OAUTH2_CLIENT_SECRET
+# CNTB_OAUTH2_USER
+# CNTB_OAUTH2_PASS
+#
+# and you are good to go
+provider "contabo" {}
+
+
+# set some default images so we can access them by name
+data "contabo_image" "ubuntu_22_04" {
+  id = "afecbb85-e2fc-46f0-9684-b46b1faf00bb"
+}
+data "contabo_image" "debian_11" {
+  id = "66abf39a-ba8b-425e-a385-8eb347ceac10"
+}
+# or create a custom image
+# resource "contabo_image" "custom_image_alpine" {
+#   name = "custom_alpine"
+#   image_url = "https://dl-cdn.alpinelinux.org/alpine/v3.13/releases/s390x/alpine-standard-3.13.5-s390x.iso"
+#   os_type = "Linux"
+#   version = "v3.13.5"
+#   description = "custom alpine iso image"
+# }
+
+# let's add an instance with default values
+resource "contabo_instance" "default_instance" {
+  image_id = data.contabo_image.debian_11.id
+}
+# or specify one with our custom image
+# resource "contabo_instance" "alpine_instance" {
+#   image_id = contabo_image.custom_image_alpine.id
+# }
+
+# output our newly created instances
+output "default_instance_output" {
+  description = "our first default instance"
+  value = contabo_instance.default_instance
+}
+# output "custom_instance_output" {
+#   description = "our first custom instance"
+#   value = contabo_instance.alpine_instance
+# }
