@@ -18,15 +18,10 @@ builds:
   goarch:
     - amd64
     - arm64
-  ignore:
-    - goos: windows
-      goarch: arm64
   binary: '{{ .ProjectName }}_v{{ .Version }}'
 archives:
   - name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
-    format_overrides:
-      - goos: windows
-        format: zip
+    format: zip
     replacements:
       darwin: Darwin
       linux: Linux
@@ -36,7 +31,8 @@ archives:
       - README.md
       - LICENSE
 checksum:
-  name_template: 'checksums.txt'
+  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  algorithm: sha256
 signs:
   - artifacts: checksum
     args:
