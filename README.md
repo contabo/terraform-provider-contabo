@@ -4,7 +4,7 @@
 
 ## Getting Started
 
-* [Link to terraform page](https://registry.terraform.io/providers/contabo/contabo/latest) \
+* [Link to terraform page](https://registry.terraform.io/providers/contabo/contabo/latest)
 * [Documentation link to terraform page](https://registry.terraform.io/providers/contabo/contabo/latest/docs)
 
 1. Install [terraform cli](https://learn.hashicorp.com/tutorials/terraform/install-cli)
