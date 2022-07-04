@@ -49,6 +49,7 @@ func Provider() *schema.Provider {
 			"contabo_image":             resourceImage(),
 			"contabo_object_storage":    resourceObjectStorage(),
 			"contabo_secret":            resourceSecret(),
+			"contabo_private_network":   resourcePrivateNetwork(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"contabo_instance":          dataSourceInstance(),
@@ -56,6 +57,7 @@ func Provider() *schema.Provider {
 			"contabo_image":             dataSourceImage(),
 			"contabo_object_storage":    dataSourceObjectStorage(),
 			"contabo_secret":            dataSourceSecret(),
+			"contabo_private_network":   dataSourcePrivateNetwork(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}

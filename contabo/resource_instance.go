@@ -428,7 +428,7 @@ func AddInstanceToData(
 	return diags
 }
 
-func BuildIpConfig(ipConfigResponse *openapi.IpConfig) []interface{} {
+func BuildIpConfig(ipConfigResponse *openapi.IpConfig2) []interface{} {
 	if ipConfigResponse != nil {
 		ipConfig := make(map[string]interface{})
 

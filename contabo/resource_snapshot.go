@@ -104,15 +104,11 @@ func resourceSnapshotRead(ctx context.Context, d *schema.ResourceData, m interfa
 	instanceId := d.Get("instance_id").(int)
 	var instanceId64 int64
 	instanceId64 = int64(instanceId)
-	// fmt.Printf("%+v\n", instanceId64)
-	// fmt.Printf("%+v\n", reflect.TypeOf(instanceId64))
 
 	res, httpResp, err := client.SnapshotsApi.
 		RetrieveSnapshot(ctx, instanceId64, snapshotId).
 		XRequestId(uuid.NewV4().String()).
 		Execute()
-
-	// fmt.Printf("%+v\n", res)
 
 	if err != nil {
 		return HandleResponseErrors(diags, httpResp)

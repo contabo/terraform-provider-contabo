@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"testing"
 
 	"contabo.com/openapi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -14,22 +13,21 @@ import (
 
 var instanceId int64 = 10001001
 
-func TestAccContaboSnapshotBasic(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckInstanceSnapshotDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testCheckContaboInstanceSnapshotConfigBasic(),
-				Check: resource.ComposeTestCheckFunc(
-					testCheckContaboInstanceSnapshotExists("contabo_instance_snapshot.new"),
-				),
-			},
-		},
-	})
-
-}
+// func TestAccContaboSnapshotBasic(t *testing.T) {
+// 	resource.Test(t, resource.TestCase{
+// 		PreCheck:     func() { testAccPreCheck(t) },
+// 		Providers:    testAccProviders,
+// 		CheckDestroy: testAccCheckInstanceSnapshotDestroy,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config: testCheckContaboInstanceSnapshotConfigBasic(),
+// 				Check: resource.ComposeTestCheckFunc(
+// 					testCheckContaboInstanceSnapshotExists("contabo_instance_snapshot.new"),
+// 				),
+// 			},
+// 		},
+// 	})
+// }
 
 func testAccCheckInstanceSnapshotDestroy(s *terraform.State) error {
 	client := testAccProvider.Meta().(*openapi.APIClient)
