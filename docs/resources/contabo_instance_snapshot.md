@@ -17,16 +17,16 @@ description: |-
 
 ### Optional
 
-- `created_date` (String)
-- `description` (String)
-- `instance_id` (Number)
-- `name` (String)
+- `created_date` (String) The creation date of this instance snapshot.
+- `description` (String) Description of this snapshot.
+- `id` (String) The identifier of the instance snapshot. Use it to manage it!
+- `instance_id` (Number) Instance identifier associated with the snapshot.
+- `name` (String) Name of the snapshot.
 
 ### Read-Only
 
-- `auto_delete_date` (String)
-- `id` (String) The ID of this resource.
-- `image_id` (String)
-- `image_name` (String)
+- `auto_delete_date` (String) The date when the snapshot will be autmatically deleted.
+- `image_id` (String) Id of the Image the snapshot was taken from.
+- `image_name` (String) Name of the Image the snapshot was taken from.
 
 

@@ -3,12 +3,12 @@
 page_title: "contabo_secret Data Source - terraform-provider-contabo-sdkv2"
 subcategory: ""
 description: |-
-  
+  The Secret Management API allows you to store and manage your passwords and ssh-keys. Usage of the Secret Management API is purely optional. As a convenience feature e.g. it allows you to reuse SSH-keys easily.
 ---
 
 # contabo_secret (Data Source)
 
-
+The Secret Management API allows you to store and manage your passwords and ssh-keys. Usage of the Secret Management API is purely optional. As a convenience feature e.g. it allows you to reuse SSH-keys easily.
 
 
 
@@ -17,17 +17,17 @@ description: |-
 
 ### Required
 
-- `name` (String)
-- `type` (String)
-- `value` (String)
+- `name` (String) Name of the secret.
+- `type` (String) The type of the secret. It will be available only when retrieving secrets, following types are allowed: `ssh`, `password`.
+- `value` (String) The value of the secret. It will be available only when retrieving a single secret.
 
 ### Optional
 
-- `created_at` (String)
-- `updated_at` (String)
+- `created_at` (String) The creation date of the secret.
+- `updated_at` (String) Last updated time of the secret.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The identifier of the secret. Use it to manage it!
 
 

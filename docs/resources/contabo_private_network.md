@@ -3,12 +3,12 @@
 page_title: "contabo_private_network Resource - terraform-provider-contabo-sdkv2"
 subcategory: ""
 description: |-
-  Provides a Contabo Private Network https://api.contabo.com/#tag/Private-Networks resource.  Private Networks can contain your compute instances whereby they are able to communicate with each other in full usolation, using private IP addresses
+  Provides a Contabo Private Network https://api.contabo.com/#tag/Private-Networks resource.  Private Networks can contain your compute instances whereby they are able to communicate with each other in full usolation, using private IP addresses.
 ---
 
 # contabo_private_network (Resource)
 
-Provides a Contabo [Private Network](https://api.contabo.com/#tag/Private-Networks) resource.  Private Networks can contain your compute instances whereby they are able to communicate with each other in full usolation, using private IP addresses
+Provides a Contabo [Private Network](https://api.contabo.com/#tag/Private-Networks) resource.  Private Networks can contain your compute instances whereby they are able to communicate with each other in full usolation, using private IP addresses.
 
 
 
@@ -17,19 +17,19 @@ Provides a Contabo [Private Network](https://api.contabo.com/#tag/Private-Networ
 
 ### Optional
 
-- `created_date` (String) The creation date of the Private Network
+- `created_date` (String) The creation date of the Private Network.
 - `description` (String) The description of the Private Network. There is a limit of 255 characters per Private Network.
-- `instance_ids` (Set of Number) Add your instaceIds here to add them to the private network, if you dont add any instanceIds just an empty private network will be created
+- `instance_ids` (Set of Number) Add the instace Ids to the private network here. If you do not add any instance Ids an empty private network will be created.
 - `name` (String) The name of the Private Network. It may contain letters, numbers, colons, dashes, and underscores. There is a limit of 255 characters per Private Network name.
-- `region` (String) Region where the Private Network should be located. Default is EU
-- `region_name` (String) The Region name where the Private Network is located.
-- `updated_at` (String)
+- `region` (String) The region where the Private Network should be located. Default region is the EU.
+- `region_name` (String) The name of the region where the Private Network is located.
+- `updated_at` (String) Time of the last update of the private network.
 
 ### Read-Only
 
-- `available_ips` (Number) The total available IPs of this Private Network
-- `cidr` (String) The cidr range of this Private Network
-- `data_center` (String) The specific data center where your Private Network is located
-- `id` (String) The identifier of the Private Network, use it to update, read, delete this Private Network
+- `available_ips` (Number) The totality of available IPs in the Private Network.
+- `cidr` (String) The cidr range of the Private Network.
+- `data_center` (String) The specific data center where the Private Network is located.
+- `id` (String) The identifier of the Private Network. Use it to manage it!
 
 

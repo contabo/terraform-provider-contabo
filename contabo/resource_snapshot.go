@@ -18,38 +18,46 @@ func resourceSnapshot() *schema.Resource {
 		DeleteContext: resourceSnapshotDelete,
 		Schema: map[string]*schema.Schema{
 			"id": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "The identifier of the instance snapshot. Use it to manage it!",
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Name of the snapshot.",
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Description of this snapshot.",
 			},
 			"instance_id": {
-				Type:     schema.TypeInt,
-				Optional: true,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Instance identifier associated with the snapshot.",
 			},
 			"created_date": {
-				Type:     schema.TypeString,
-				Computed: true,
-				Optional: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "The creation date of this instance snapshot.",
 			},
 			"auto_delete_date": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The date when the snapshot will be autmatically deleted.",
 			},
 			"image_id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Id of the Image the snapshot was taken from.",
 			},
 			"image_name": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Name of the Image the snapshot was taken from.",
 			},
 		},
 	}
@@ -73,16 +81,11 @@ func resourceSnapshotCreate(ctx context.Context, d *schema.ResourceData, m inter
 	var instanceId64 int64
 
 	instanceId64 = int64(instanceId)
-	// fmt.Printf("%+v\n", instanceId64)
-	// fmt.Printf("%+v\n", reflect.TypeOf(instanceId64))
-
-	// fmt.Printf("%+v\n", instanceId64)
 	res, httpResp, err := client.SnapshotsApi.
 		CreateSnapshot(ctx, instanceId64).
 		XRequestId(uuid.NewV4().String()).
 		CreateSnapshotRequest(*createSnapshotRequest).
 		Execute()
-	// fmt.Printf("%+v\n", res)
 	if err != nil {
 		return HandleResponseErrors(diags, httpResp)
 	} else if len(res.Data) != 1 {
@@ -90,7 +93,6 @@ func resourceSnapshotCreate(ctx context.Context, d *schema.ResourceData, m inter
 	}
 
 	d.SetId(res.Data[0].SnapshotId)
-	//d.Set("instanceId", instanceId64)
 
 	return resourceSnapshotRead(ctx, d, m)
 }
