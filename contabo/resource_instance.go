@@ -18,6 +18,9 @@ func resourceInstance() *schema.Resource {
 		ReadContext:   resourceInstanceRead,
 		UpdateContext: resourceInstanceUpdate,
 		DeleteContext: resourceInstanceDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,

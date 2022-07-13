@@ -17,6 +17,9 @@ func resourceImage() *schema.Resource {
 		ReadContext:   resourceImageRead,
 		UpdateContext: resourceImageUpdate,
 		DeleteContext: resourceImageDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,

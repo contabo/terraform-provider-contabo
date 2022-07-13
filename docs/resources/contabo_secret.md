@@ -15,10 +15,10 @@ The Secret Management API allows you to store and manage your passwords and ssh-
 ```terraform
 # Configure your Contabo API credentials
 provider "contabo" {
-  oauth2_client_id = "[your client id]"
+  oauth2_client_id     = "[your client id]"
   oauth2_client_secret = "[your client secret]"
-  oauth2_user = "[your username]"
-  oauth2_pass = "[your password]"
+  oauth2_user          = "[your username]"
+  oauth2_pass          = "[your password]"
 }
 
 # Create a new secret

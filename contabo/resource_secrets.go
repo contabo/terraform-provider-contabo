@@ -18,6 +18,9 @@ func resourceSecret() *schema.Resource {
 		ReadContext:   resourceSecretRead,
 		UpdateContext: resourceSecretUpdate,
 		DeleteContext: resourceSecretDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"created_at": &schema.Schema{
 				Type:        schema.TypeString,
@@ -51,9 +54,6 @@ func resourceSecret() *schema.Resource {
 				Required:    true,
 				Description: "The type of the secret. It will be available only when retrieving secrets, following types are allowed: `ssh`, `password`.",
 			},
-		},
-		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
 		},
 	}
 }

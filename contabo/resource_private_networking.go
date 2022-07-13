@@ -23,6 +23,9 @@ func resourcePrivateNetwork() *schema.Resource {
 		ReadContext:   resourcePrivateNetworkRead,
 		UpdateContext: resourcePrivateNetworkUpdate,
 		DeleteContext: resourcePrivateNetworkDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"created_date": &schema.Schema{
 				Type:        schema.TypeString,

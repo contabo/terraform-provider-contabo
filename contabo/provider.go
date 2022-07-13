@@ -16,31 +16,37 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_API", "https://api.contabo.com"),
+				Description: "The api endpoint is https://api.contabo.com.",
 			},
 			"oauth2_token_url": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_TOKEN_URL", "https://auth.contabo.com/auth/realms/contabo/protocol/openid-connect/token"),
+				Description: "The oauth2 token url is https://auth.contabo.com/auth/realms/contabo/protocol/openid-connect/token.",
 			},
 			"oauth2_client_id": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_CLIENT_ID", nil),
+				Description: "Your oauth2 client id can be found in the [Customer Control Panel](https://new.contabo.com/account/security) under the menu item account secret.",
 			},
 			"oauth2_client_secret": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_CLIENT_SECRET", nil),
+				Description: "Your oauth2 client secret can be found in the [Customer Control Panel](https://new.contabo.com/account/security) under the menu item account secret.",
 			},
 			"oauth2_user": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_USER", nil),
+				Description: "API User (your email address to login to the [Customer Control Panel](https://new.contabo.com/account/security) under the menu item account secret.",
 			},
 			"oauth2_pass": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_PASS", nil),
+				Description: "API Password (this is a new password which you'll set or change in the [Customer Control Panel](https://new.contabo.com/account/security) under the menu item account secret.)",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -81,7 +87,6 @@ func providerConfigure(
 		return nil, diag.FromErr(err)
 	}
 
-	// TODO: validate config values
 	newClient, err := client.NewClient(
 		apiUrl,
 		parsedTokenUrl.String(),

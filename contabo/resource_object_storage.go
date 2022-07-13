@@ -20,6 +20,9 @@ func resourceObjectStorage() *schema.Resource {
 		ReadContext:   resourceObjectStorageRead,
 		UpdateContext: resourceObjectStorageUpgrade,
 		DeleteContext: resourceObjectStorageCancel,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,
@@ -99,9 +102,6 @@ func resourceObjectStorage() *schema.Resource {
 				Required:    true,
 				Description: "Amount of purchased / requested object storage in terabyte.",
 			},
-		},
-		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
 		},
 	}
 }

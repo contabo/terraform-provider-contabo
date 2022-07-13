@@ -16,6 +16,9 @@ func resourceSnapshot() *schema.Resource {
 		ReadContext:   resourceSnapshotRead,
 		UpdateContext: resourceSnapshotUpdate,
 		DeleteContext: resourceSnapshotDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,
