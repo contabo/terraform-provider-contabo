@@ -180,7 +180,10 @@ func addPrivateNetworkAddOnToInstance(
 	instanceId int64) (*http.Response, error) {
 
 	var upgradeInstance openapi.UpgradeInstanceRequest
-	upgradeInstance.AddOns = []int64{privateNetworkAddOnId}
+	// we are sending an empty object for now
+    //according to the upgradeInstanceRequest openapi spec
+    privateNetworking := make(map[string]interface{})
+    upgradeInstance.PrivateNetworking = &privateNetworking
 
 	_, httpResp, err := client.InstancesApi.UpgradeInstance(context.Background(), instanceId).XRequestId(uuid.NewV4().String()).
 		UpgradeInstanceRequest(upgradeInstance).
