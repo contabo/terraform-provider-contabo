@@ -492,7 +492,7 @@ func BuildAddons(addOnResponse []openapi.AddOnResponse) []map[string]interface{}
 
 		for _, addOn := range addOnResponse {
 			builtAddOn := make(map[string]interface{})
-			builtAddOn["id"] = addOn.Id
+			builtAddOn["id"] = strconv.FormatInt(addOn.Id, 10)
 			builtAddOn["quantity"] = addOn.Quantity
 
 			addOns = append(addOns, builtAddOn)
