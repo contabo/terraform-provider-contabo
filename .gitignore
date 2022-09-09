@@ -7,3 +7,5 @@ openapi/
 
 terraform-provider-contabo*
 examples/main.tf
+examples/*.tfstate
+examples/*.tfstate.backup

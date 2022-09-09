@@ -359,12 +359,10 @@ func resourceInstanceUpdate(ctx context.Context, d *schema.ResourceData, m inter
 		}
 	}
 
-	if d.HasChange("image_id") {
-		imageId := d.Get("image_id").(string)
-		if imageId != "" {
-			patchInstanceRequest.ImageId = imageId
-			anyChange = true
-		}
+	imageId := d.Get("image_id").(string)
+	if imageId != "" {
+		patchInstanceRequest.ImageId = imageId
+		anyChange = true
 	}
 
 	if anyChange {

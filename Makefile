@@ -38,6 +38,13 @@ build-only:
 	go mod download
 	go build -o terraform-provider-contabo_$(VERSION)
 
+.PHONY: build-only-debug
+build-only-debug:
+	go mod tidy
+	go mod download
+	go build -gcflags="all=-N -l"  -o terraform-provider-contabo_$(VERSION)
+
+
 
 .PHONY: doc-preview
 doc-preview:
