@@ -6,12 +6,12 @@ provider "contabo" {
   oauth2_pass          = "[your password]"
 }
 
-# Create a new object storage in region EU
+# Create a new compute instance (vps/vds) in region EU, with specs of the V2 product. Also it has a contract period of 3 month
 resource "contabo_instance" "database_instance" {
-  name       = "database"
-  product_id = "V2"
-  region     = "EU"
-  period     = 3 
+  display_name  = "database"
+  product_id    = "V2"
+  region        = "EU"
+  period        = 3 
 }
 
 # Update custom image on instance

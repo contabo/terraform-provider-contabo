@@ -21,12 +21,12 @@ provider "contabo" {
   oauth2_pass          = "[your password]"
 }
 
-# Create a new object storage in region EU
+# Create a new compute instance (vps/vds) in region EU, with specs of the V2 product. Also it has a contract period of 3 month
 resource "contabo_instance" "database_instance" {
-  name       = "database"
-  product_id = "V2"
-  region     = "EU"
-  period     = 3 
+  display_name  = "database"
+  product_id    = "V2"
+  region        = "EU"
+  period        = 3 
 }
 
 # Update custom image on instance
@@ -42,8 +42,8 @@ resource "contabo_instance" "database_instance" {
 
 - `add_ons` (Block List) (see [below for nested schema](#nestedblock--add_ons))
 - `cancel_date` (String) The date on which the instance will be cancelled.
-- `display_name` (String) Image Id is used to set up the compute instance. Ubuntu 20.04 is the default.
-- `image_id` (String) Image Id is used to set up the compute instance. Ubuntu 20.04 is the default.
+- `display_name` (String) The instance name chosen by the customer that will be shown in the customer panel.
+- `image_id` (String) Image Id is used to set up the compute instance. Ubuntu 20.04 is the default, currently you have to get the Id with our [API](https://api.contabo.com/#tag/Images/operation/retrieveImage) or via our [command line](https://github.com/contabo/cntb) tool with this command: `cntb get images`.
 - `license` (String) Additional license in order to enhance your chosen product. It is mainly needed for software licenses on your product (not needed for windows). See our [api documentation](https://api.contabo.com/#tag/Instances/operation/createInstance) for all available licenses.
 - `period` (Number) Initial contract period in months. Available periods are: 1, 3, 6 and 12 months. The default setting is 1 month.
 - `product_id` (String) Choose the VPS/VDS product you want to buy. See our products [here](https://api.contabo.com/#tag/Instances/operation/createInstance).

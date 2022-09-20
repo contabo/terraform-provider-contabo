@@ -41,13 +41,13 @@ func resourceInstance() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
-				Description: "Image Id is used to set up the compute instance. Ubuntu 20.04 is the default.",
+				Description: "The instance name chosen by the customer that will be shown in the customer panel.",
 			},
 			"image_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
-				Description: "Image Id is used to set up the compute instance. Ubuntu 20.04 is the default.",
+				Description: "Image Id is used to set up the compute instance. Ubuntu 20.04 is the default, currently you have to get the Id with our [API](https://api.contabo.com/#tag/Images/operation/retrieveImage) or via our [command line](https://github.com/contabo/cntb) tool with this command: `cntb get images`.",
 			},
 			"region": {
 				Type:        schema.TypeString,
