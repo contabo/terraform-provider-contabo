@@ -13,7 +13,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-var privateNetworkAddOnId int64 = 1477
 var httpConflict string = "409 Conflict"
 
 func resourcePrivateNetwork() *schema.Resource {
@@ -24,32 +23,32 @@ func resourcePrivateNetwork() *schema.Resource {
 		UpdateContext: resourcePrivateNetworkUpdate,
 		DeleteContext: resourcePrivateNetworkDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
-			"created_date": &schema.Schema{
+			"created_date": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
 				Description: "The creation date of the Private Network.",
 			},
-			"updated_at": &schema.Schema{
+			"updated_at": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
 				Description: "Time of the last update of the private network.",
 			},
-			"id": &schema.Schema{
+			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The identifier of the Private Network. Use it to manage it!",
 			},
-			"name": &schema.Schema{
+			"name": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The name of the Private Network. It may contain letters, numbers, colons, dashes, and underscores. There is a limit of 255 characters per Private Network name.",
 			},
-			"description": &schema.Schema{
+			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The description of the Private Network. There is a limit of 255 characters per Private Network.",
@@ -60,29 +59,95 @@ func resourcePrivateNetwork() *schema.Resource {
 				Optional:    true,
 				Description: "Add the instace Ids to the private network here. If you do not add any instance Ids an empty private network will be created.",
 			},
-			"region": &schema.Schema{
+			"instances": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"instance_id": {
+							Type:        schema.TypeInt,
+							Computed:    true,
+							Description: "The identifier of the compute instance.",
+						},
+						"display_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Computed:    true,
+							Description: "The instance name chosen by the customer that will be shown in the customer panel.",
+						},
+						"name": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Name of the compute instance.",
+						},
+						"private_ip_config": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "List of all private IP addresses of the compute instance.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"v4": {
+										Type:     schema.TypeList,
+										Computed: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"ip": {
+													Type:        schema.TypeString,
+													Computed:    true,
+													Description: "IP Address",
+												},
+												"netmask_cidr": {
+													Type:        schema.TypeInt,
+													Computed:    true,
+													Description: "Netmask CIDR",
+												},
+												"gateway": {
+													Type:        schema.TypeString,
+													Computed:    true,
+													Description: "Gateway",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						"status": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "State of the instance in the Private Network. The status can be one of 'ok', 'restart', 'reinstall', 'reinstallation failed', 'installing'",
+						},
+						"error_message": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "If the instance is in an error state (see status property), the error message can be seen in this field.",
+						},
+					},
+				},
+			},
+			"region": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "EU",
 				Description: "The region where the Private Network should be located. Default region is the EU.",
 			},
-			"region_name": &schema.Schema{
+			"region_name": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
 				Description: "The name of the region where the Private Network is located.",
 			},
-			"data_center": &schema.Schema{
+			"data_center": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The specific data center where the Private Network is located.",
 			},
-			"available_ips": &schema.Schema{
+			"available_ips": {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "The totality of available IPs in the Private Network.",
 			},
-			"cidr": &schema.Schema{
+			"cidr": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The cidr range of the Private Network.",
@@ -131,9 +196,9 @@ func resourcePrivateNetworkCreate(
 		instanceIdInt := instanceId.(int)
 		instanceId := int64(instanceIdInt)
 
-		httpResp, err := addPrivateNetworkAddOnToInstance(diags, client, instanceId)
-		isErrNotConflict := !strings.Contains(err.Error(), httpConflict)
-		if err != nil && isErrNotConflict {
+		httpResp, err = retryAddPrivateNetworkAddOnToInstance(diags, client, instanceId, 0)
+
+		if err != nil && !strings.Contains(err.Error(), httpConflict) {
 			return HandleResponseErrors(diags, httpResp)
 		}
 
@@ -181,9 +246,9 @@ func addPrivateNetworkAddOnToInstance(
 
 	var upgradeInstance openapi.UpgradeInstanceRequest
 	// we are sending an empty object for now
-    //according to the upgradeInstanceRequest openapi spec
-    privateNetworking := make(map[string]interface{})
-    upgradeInstance.PrivateNetworking = &privateNetworking
+	//according to the upgradeInstanceRequest openapi spec
+	privateNetworking := make(map[string]interface{})
+	upgradeInstance.PrivateNetworking = &privateNetworking
 
 	_, httpResp, err := client.InstancesApi.UpgradeInstance(context.Background(), instanceId).XRequestId(uuid.NewV4().String()).
 		UpgradeInstanceRequest(upgradeInstance).
@@ -258,6 +323,7 @@ func resourcePrivateNetworkUpdate(
 		if rsltDiag != nil {
 			return rsltDiag
 		}
+		anyChange = true
 	}
 
 	if anyChange {
@@ -301,9 +367,9 @@ func handleInstanceChanges(diags diag.Diagnostics,
 		instanceIdInt := instanceId.(int)
 		instanceId := int64(instanceIdInt)
 
-		httpResp, err := addPrivateNetworkAddOnToInstance(diags, client, instanceId)
-		isErrNotConflict := !strings.Contains(err.Error(), httpConflict)
-		if err != nil && isErrNotConflict {
+		httpResp, err := retryAddPrivateNetworkAddOnToInstance(diags, client, instanceId, 0)
+
+		if err != nil && !strings.Contains(err.Error(), httpConflict) {
 			return HandleResponseErrors(diags, httpResp)
 		}
 
@@ -313,6 +379,22 @@ func handleInstanceChanges(diags diag.Diagnostics,
 		}
 	}
 	return nil
+}
+
+func retryAddPrivateNetworkAddOnToInstance(
+	diags diag.Diagnostics,
+	client *openapi.APIClient,
+	instanceId int64,
+	depht int8,
+) (*http.Response, error) {
+	httpResp, err := addPrivateNetworkAddOnToInstance(diags, client, instanceId)
+
+	if err != nil && depht < 10 {
+		time.Sleep(time.Second)
+		return retryAddPrivateNetworkAddOnToInstance(diags, client, instanceId, depht+1)
+	}
+
+	return httpResp, err
 }
 
 func resourcePrivateNetworkDelete(
@@ -387,13 +469,47 @@ func AddPrivateNetworkToData(
 	if err := d.Set("created_date", createdDate); err != nil {
 		return diag.FromErr(err)
 	}
-	var instanceIds []int64
+
+	instanceIds := []int64{}
+	instances := []map[string]interface{}{}
+
 	for _, instance := range privateNetwork.Instances {
 		instanceIds = append(instanceIds, instance.InstanceId)
+		instances = append(instances, buildInstanceIpConfig(instance))
 	}
 	if err := d.Set("instance_ids", instanceIds); err != nil {
 		return diag.FromErr(err)
 	}
 
+	if err := d.Set("instances", instances); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return diags
+}
+
+func buildInstanceIpConfig(instance openapi.Instances) map[string]interface{} {
+	instanceConfig := make(map[string]interface{})
+
+	instanceConfig["instance_id"] = instance.InstanceId
+	instanceConfig["display_name"] = instance.DisplayName
+	instanceConfig["name"] = instance.Name
+	instanceConfig["status"] = instance.Status
+	instanceConfig["error_message"] = instance.ErrorMessage
+
+	privateIpConfig := make(map[string]interface{})
+	privateIpConfigList := []map[string]interface{}{}
+
+	for _, privateIpConfigV4 := range instance.PrivateIpConfig.V4 {
+		ipConfig := make(map[string]interface{})
+		ipConfig["ip"] = privateIpConfigV4.Ip
+		ipConfig["netmask_cidr"] = privateIpConfigV4.NetmaskCidr
+		ipConfig["gateway"] = privateIpConfigV4.Gateway
+		privateIpConfigList = append(privateIpConfigList, ipConfig)
+	}
+
+	privateIpConfig["v4"] = privateIpConfigList
+	instanceConfig["private_ip_config"] = []interface{}{privateIpConfig}
+
+	return instanceConfig
 }

@@ -19,7 +19,7 @@ func resourceInstance() *schema.Resource {
 		UpdateContext: resourceInstanceUpdate,
 		DeleteContext: resourceInstanceDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -222,6 +222,38 @@ func resourceInstance() *schema.Resource {
 				Computed:    true,
 				Description: "Initial contract period in months. Available periods are: 1, 3, 6 and 12 months. The default setting is 1 month.",
 			},
+			"additional_ips": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "All other additional IP addresses of the instance.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"v4": {
+							Type:     schema.TypeList,
+							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"ip": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "IP Address",
+									},
+									"netmask_cidr": {
+										Type:        schema.TypeInt,
+										Computed:    true,
+										Description: "Netmask CIDR",
+									},
+									"gateway": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "Gateway",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -303,18 +335,13 @@ func resourceInstanceRead(ctx context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	res, httpResp, err := client.InstancesApi.
-		RetrieveInstance(ctx, instanceId).
-		XRequestId(uuid.NewV4().String()).
-		Execute()
+	instance, diag := pollInstanceInstalled(diags, client, ctx, instanceId)
 
-	if err != nil {
-		return HandleResponseErrors(diags, httpResp)
-	} else if len(res.Data) != 1 {
-		return MultipleDataObjectsError(diags)
+	if err != nil || instance == nil {
+		return append(diags, diag...)
 	}
 
-	return AddInstanceToData(res.Data[0], d, diags)
+	return AddInstanceToData(*instance, d, diags)
 }
 
 func resourceInstanceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -412,7 +439,7 @@ func AddInstanceToData(
 	if err := d.Set("product_id", instance.ProductId); err != nil {
 		return diag.FromErr(err)
 	}
-	ipConfig := BuildIpConfig(instance.IpConfig)
+	ipConfig := buildIpConfig(instance.IpConfig)
 	if err := d.Set("ip_config", ipConfig); err != nil && len(ipConfig) > 0 {
 		return diag.FromErr(err)
 	}
@@ -447,7 +474,7 @@ func AddInstanceToData(
 	if err := d.Set("v_host_id", instance.VHostId); err != nil {
 		return diag.FromErr(err)
 	}
-	addOns := BuildAddons(instance.AddOns)
+	addOns := buildAddons(instance.AddOns)
 	if err := d.Set("add_ons", addOns); err != nil && len(addOns) > 0 {
 		return diag.FromErr(err)
 	}
@@ -457,11 +484,16 @@ func AddInstanceToData(
 	if err := d.Set("product_type", instance.ProductType); err != nil {
 		return diag.FromErr(err)
 	}
+	additionalIps := buildAdditionalIps(instance.AdditionalIps)
+	if err := d.Set("additional_ips", additionalIps); err != nil &&
+		len(additionalIps) > 0 {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }
 
-func BuildIpConfig(ipConfigResponse *openapi.IpConfig2) []interface{} {
+func buildIpConfig(ipConfigResponse *openapi.IpConfig2) []interface{} {
 	if ipConfigResponse != nil {
 		ipConfig := make(map[string]interface{})
 
@@ -484,7 +516,7 @@ func BuildIpConfig(ipConfigResponse *openapi.IpConfig2) []interface{} {
 	return nil
 }
 
-func BuildAddons(addOnResponse []openapi.AddOnResponse) []map[string]interface{} {
+func buildAddons(addOnResponse []openapi.AddOnResponse) []map[string]interface{} {
 	if addOnResponse != nil {
 		var addOns []map[string]interface{}
 
@@ -500,4 +532,54 @@ func BuildAddons(addOnResponse []openapi.AddOnResponse) []map[string]interface{}
 	}
 
 	return nil
+}
+
+func buildAdditionalIps(
+	additionalIpsResponse []openapi.AdditionalIp,
+) []map[string]interface{} {
+	if additionalIpsResponse != nil {
+		additionalIps := []map[string]interface{}{}
+
+		for _, ipV4 := range additionalIpsResponse {
+			v4 := make(map[string]interface{})
+			ipConfig := make(map[string]interface{})
+			ipConfig["ip"] = ipV4.V4.Ip
+			ipConfig["netmask_cidr"] = ipV4.V4.NetmaskCidr
+			ipConfig["gateway"] = ipV4.V4.Gateway
+
+			v4["v4"] = []interface{}{ipConfig}
+			additionalIps = append(additionalIps, v4)
+		}
+
+		return additionalIps
+	}
+
+	return nil
+}
+
+func pollInstanceInstalled(
+	diags diag.Diagnostics,
+	client *openapi.APIClient,
+	ctx context.Context,
+	instanceId int64,
+) (*openapi.InstanceResponse, diag.Diagnostics) {
+	res, httpResp, err := client.InstancesApi.
+		RetrieveInstance(ctx, instanceId).
+		XRequestId(uuid.NewV4().String()).
+		Execute()
+
+	if err != nil {
+		return nil, HandleResponseErrors(diags, httpResp)
+	} else if len(res.Data) != 1 {
+		return nil, MultipleDataObjectsError(diags)
+	}
+
+	status := res.Data[0].Status
+
+	if status == openapi.PROVISIONING || status == openapi.INSTALLING {
+		time.Sleep(time.Second)
+		return pollInstanceInstalled(diags, client, ctx, instanceId)
+	}
+
+	return &res.Data[0], nil
 }

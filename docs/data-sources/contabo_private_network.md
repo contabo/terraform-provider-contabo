@@ -31,5 +31,34 @@ Provides a Contabo [Private Network](https://api.contabo.com/#tag/Private-Networ
 - `cidr` (String) The cidr range of the Private Network.
 - `data_center` (String) The specific data center where the Private Network is located.
 - `id` (String) The identifier of the Private Network. Use it to manage it!
+- `instances` (List of Object) (see [below for nested schema](#nestedatt--instances))
+
+<a id="nestedatt--instances"></a>
+### Nested Schema for `instances`
+
+Read-Only:
+
+- `display_name` (String)
+- `error_message` (String)
+- `instance_id` (String)
+- `name` (String)
+- `private_ip_config` (List of Object) (see [below for nested schema](#nestedobjatt--instances--private_ip_config))
+- `status` (String)
+
+<a id="nestedobjatt--instances--private_ip_config"></a>
+### Nested Schema for `instances.private_ip_config`
+
+Read-Only:
+
+- `v4` (List of Object) (see [below for nested schema](#nestedobjatt--instances--private_ip_config--v4))
+
+<a id="nestedobjatt--instances--private_ip_config--v4"></a>
+### Nested Schema for `instances.private_ip_config.v4`
+
+Read-Only:
+
+- `gateway` (String)
+- `ip` (String)
+- `netmask_cidr` (Number)
 
 

@@ -211,6 +211,30 @@ func dataSourceInstance() *schema.Resource {
 				Computed:    true,
 				Description: "Initial contract period in months. Available periods are: 1, 3, 6 and 12 months. The default setting is 1 month.",
 			},
+			"additional_ips_v4": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "All other additional IP addresses of the instance.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ip": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "IP Address",
+						},
+						"netmask_cidr": {
+							Type:        schema.TypeInt,
+							Computed:    true,
+							Description: "Netmask CIDR",
+						},
+						"gateway": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Gateway",
+						},
+					},
+				},
+			},
 		},
 	}
 }

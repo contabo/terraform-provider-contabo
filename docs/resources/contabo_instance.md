@@ -54,6 +54,7 @@ resource "contabo_instance" "database_instance" {
 
 ### Read-Only
 
+- `additional_ips` (List of Object) All other additional IP addresses of the instance. (see [below for nested schema](#nestedatt--additional_ips))
 - `cpu_cores` (Number) CPU core count of the instance.
 - `created_date` (String) The creation date of the compute instance.
 - `disk_mb` (Number) Image disk size of the instance in megabyte.
@@ -76,6 +77,24 @@ Optional:
 
 - `id` (String) Id of the Addon. Please refer to list [here](https://contabo.com/en/product-list/?show_ids=true).
 - `quantity` (Number) The number of Addons you wish to aquire.
+
+
+<a id="nestedatt--additional_ips"></a>
+### Nested Schema for `additional_ips`
+
+Read-Only:
+
+- `v4` (List of Object) (see [below for nested schema](#nestedobjatt--additional_ips--v4))
+
+<a id="nestedobjatt--additional_ips--v4"></a>
+### Nested Schema for `additional_ips.v4`
+
+Read-Only:
+
+- `gateway` (String)
+- `ip` (String)
+- `netmask_cidr` (Number)
+
 
 
 <a id="nestedatt--ip_config"></a>

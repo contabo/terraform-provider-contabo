@@ -14,14 +14,30 @@ import (
 
 func TestAccContaboPrivateNetworkBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
 		Providers:    testAccProviders,
 		CheckDestroy: testAccCheckPrivateNetworkDestroy,
 		Steps: []resource.TestStep{
 			{
+				Config: testAddInstance(),
+			},
+			{
 				Config: testCheckContaboPrivateNetworkConfigBasic(),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckContaboPrivateNetworkExists("contabo_private_network.new"),
+					resource.TestCheckResourceAttr("contabo_private_network.new", "instances.#", "0"),
+				),
+			},
+			{
+				Config: testContaboPrivateNetworkConfigWithInstance(),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckContaboPrivateNetworkExists("contabo_private_network.with_instance"),
+					resource.TestCheckResourceAttr("contabo_private_network.with_instance", "instances.#", "1"),
+					resource.TestCheckResourceAttr(
+						"contabo_private_network.with_instance", "instances.0.private_ip_config.0.v4.0.ip", "10.0.0.1"),
+					resource.TestCheckResourceAttr("contabo_instance.new", "additional_ips.#", "0"),
 				),
 			},
 		},
@@ -56,14 +72,36 @@ func testAccCheckPrivateNetworkDestroy(s *terraform.State) error {
 	return nil
 }
 
+func testAddInstance() string {
+	return `
+		resource "contabo_instance" "new" {
+			display_name = "custom terraform"
+		}
+	`
+}
+
 func testCheckContaboPrivateNetworkConfigBasic() string {
 	return `
-		provider "contabo" {}
-
 		resource "contabo_private_network" "new" {
 			name        = "terraform-test-private-network"
 			description = "terraform test private network"
 			region 		= "EU"
+		}
+	`
+}
+
+func testContaboPrivateNetworkConfigWithInstance() string {
+	return `
+		resource "contabo_instance" "new" {
+			display_name = "custom terraform"
+		}
+
+		resource "contabo_private_network" "with_instance" {
+			name			= "terraform-test-private-network-with-instance"
+			region			= "EU"
+			instance_ids 	= [
+				contabo_instance.new.id
+			]
 		}
 	`
 }
