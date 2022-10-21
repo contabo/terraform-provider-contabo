@@ -15,25 +15,80 @@ func TestAccContaboInstanceBasic(t *testing.T) {
 		CheckDestroy: testAccCheckInstanceDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testCheckContaboInstanceConfigBasic(),
+				Config: updateAndReinstallVPSCreation(),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckContaboInstanceExists("contabo_instance.new"),
+					testCheckContaboInstanceExists("contabo_instance.update_reinstall_test"),
+					resource.TestCheckResourceAttr("contabo_instance.update_reinstall_test", "display_name", "created_display_name"),
 				),
+				PreventPostDestroyRefresh: true,
+			},
+			{
+				Config: updateAndReinstallInstallFedora(),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckContaboInstanceExists("contabo_instance.update_reinstall_test"),
+					resource.TestCheckResourceAttr("contabo_instance.update_reinstall_test", "image_id", "1e1802ac-843c-42ed-9533-add37aaff46b"),
+				),
+				PreventPostDestroyRefresh: true,
+			},
+			{
+				Config: updateAndReinstallDisplayNameUpdate(),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckContaboInstanceExists("contabo_instance.update_reinstall_test"),
+					resource.TestCheckResourceAttr("contabo_instance.update_reinstall_test", "display_name", "first_updated_display_name"),
+				),
+				PreventPostDestroyRefresh: true,
+			},
+			{
+				Config: updateAndReinstallUpdateDisplayNameAndInstallArch(),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckContaboInstanceExists("contabo_instance.update_reinstall_test"),
+					resource.TestCheckResourceAttr("contabo_instance.update_reinstall_test", "display_name", "secound_updated_display_name"),
+					resource.TestCheckResourceAttr("contabo_instance.update_reinstall_test", "image_id", "69b52ee3-2fda-4f44-b8de-69e480d87c7d"),
+				),
+				PreventPostDestroyRefresh: true,
 			},
 		},
 	})
 }
 
-func testAccCheckInstanceDestroy(s *terraform.State) error {
-	return nil
-}
-
-func testCheckContaboInstanceConfigBasic() string {
+func updateAndReinstallVPSCreation() string {
 	return `
 		provider "contabo" {}
 
-		resource "contabo_instance" "new" {
-			display_name = "custom terraform"
+		resource "contabo_instance" "update_reinstall_test" {
+			display_name = "created_display_name"
+			image_id = "66abf39a-ba8b-425e-a385-8eb347ceac10"
+		}
+	`
+}
+
+func updateAndReinstallDisplayNameUpdate() string {
+	return `
+		provider "contabo" {}
+
+		resource "contabo_instance" "update_reinstall_test" {
+			display_name = "first_updated_display_name"
+		}
+	`
+}
+
+func updateAndReinstallInstallFedora() string {
+	return `
+		provider "contabo" {}
+
+		resource "contabo_instance" "update_reinstall_test" {
+			image_id = "1e1802ac-843c-42ed-9533-add37aaff46b"
+		}
+	`
+}
+
+func updateAndReinstallUpdateDisplayNameAndInstallArch() string {
+	return `
+		provider "contabo" {}
+
+		resource "contabo_instance" "update_reinstall_test" {
+			image_id = "69b52ee3-2fda-4f44-b8de-69e480d87c7d"
+			display_name = "secound_updated_display_name"
 		}
 	`
 }
@@ -52,4 +107,8 @@ func testCheckContaboInstanceExists(n string) resource.TestCheckFunc {
 
 		return nil
 	}
+}
+
+func testAccCheckInstanceDestroy(s *terraform.State) error {
+	return nil
 }

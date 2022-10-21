@@ -9,3 +9,4 @@ terraform-provider-contabo*
 examples/main.tf
 examples/*.tfstate
 examples/*.tfstate.backup
+__debug_bin

@@ -43,14 +43,14 @@ resource "contabo_instance" "database_instance" {
 - `add_ons` (Block List) (see [below for nested schema](#nestedblock--add_ons))
 - `cancel_date` (String) The date on which the instance will be cancelled.
 - `display_name` (String) The instance name chosen by the customer that will be shown in the customer panel.
-- `image_id` (String) Image Id is used to set up the compute instance. Ubuntu 20.04 is the default, currently you have to get the Id with our [API](https://api.contabo.com/#tag/Images/operation/retrieveImage) or via our [command line](https://github.com/contabo/cntb) tool with this command: `cntb get images`.
+- `image_id` (String) CAUTION: On updating this value your server will be reinstalled! Image Id is used to set up the compute instance. Ubuntu 20.04 is the default, currently you have to get the Id with our [API](https://api.contabo.com/#tag/Images/operation/retrieveImage) or via our [command line](https://github.com/contabo/cntb) tool with this command: `cntb get images`.
 - `license` (String) Additional license in order to enhance your chosen product. It is mainly needed for software licenses on your product (not needed for windows). See our [api documentation](https://api.contabo.com/#tag/Instances/operation/createInstance) for all available licenses.
 - `period` (Number) Initial contract period in months. Available periods are: 1, 3, 6 and 12 months. The default setting is 1 month.
 - `product_id` (String) Choose the VPS/VDS product you want to buy. See our products [here](https://api.contabo.com/#tag/Instances/operation/createInstance).
 - `region` (String) Instance Region where the compute instance should be located. Default region is the EU. Following regions are available: `EU`,`US-central`,`US-east`,`US-west`,`SIN`.
-- `root_password` (Number) Root password of the compute instance.
-- `ssh_keys` (List of Number) Array of `secretIds` of public SSH keys for logging into as defaultUser with administrator/root privileges. Applies to Linux/BSD systems. Please refer to Secrets Management API.
-- `user_data` (String) Cloud-Init Config in order to customize during start of compute instance.
+- `root_password` (Number) CAUTION: On updating this value your server will be reinstalled! Root password of the compute instance.
+- `ssh_keys` (List of Number) CAUTION: On updating this value your server will be reinstalled! Array of `secretIds` of public SSH keys for logging into as defaultUser with administrator/root privileges. Applies to Linux/BSD systems. Please refer to Secrets Management API.
+- `user_data` (String) CAUTION: On updating this value your server will be reinstalled! Cloud-Init Config in order to customize during start of compute instance.
 
 ### Read-Only
 

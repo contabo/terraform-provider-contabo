@@ -47,7 +47,7 @@ func resourceInstance() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
-				Description: "Image Id is used to set up the compute instance. Ubuntu 20.04 is the default, currently you have to get the Id with our [API](https://api.contabo.com/#tag/Images/operation/retrieveImage) or via our [command line](https://github.com/contabo/cntb) tool with this command: `cntb get images`.",
+				Description: "CAUTION: On updating this value your server will be reinstalled! Image Id is used to set up the compute instance. Ubuntu 20.04 is the default, currently you have to get the Id with our [API](https://api.contabo.com/#tag/Images/operation/retrieveImage) or via our [command line](https://github.com/contabo/cntb) tool with this command: `cntb get images`.",
 			},
 			"region": {
 				Type:        schema.TypeString,
@@ -147,12 +147,12 @@ func resourceInstance() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeInt,
 				},
-				Description: "Array of `secretIds` of public SSH keys for logging into as defaultUser with administrator/root privileges. Applies to Linux/BSD systems. Please refer to Secrets Management API.",
+				Description: "CAUTION: On updating this value your server will be reinstalled! Array of `secretIds` of public SSH keys for logging into as defaultUser with administrator/root privileges. Applies to Linux/BSD systems. Please refer to Secrets Management API.",
 			},
 			"root_password": {
 				Optional:    true,
 				Type:        schema.TypeInt,
-				Description: "Root password of the compute instance.",
+				Description: "CAUTION: On updating this value your server will be reinstalled! Root password of the compute instance.",
 			},
 			"created_date": {
 				Type:        schema.TypeString,
@@ -208,7 +208,7 @@ func resourceInstance() *schema.Resource {
 			"user_data": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Cloud-Init Config in order to customize during start of compute instance.",
+				Description: "CAUTION: On updating this value your server will be reinstalled! Cloud-Init Config in order to customize during start of compute instance.",
 			},
 			"license": {
 				Type:        schema.TypeString,
@@ -347,13 +347,82 @@ func resourceInstanceRead(ctx context.Context, d *schema.ResourceData, m interfa
 func resourceInstanceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 	client := m.(*openapi.APIClient)
-	anyChange := false
 	instanceId, err := strconv.ParseInt(d.Id(), 10, 64)
-
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	if shouldUpdateInstanceValues(d) {
+		updateInstanceValues(d, client, ctx, instanceId, diags, m)
+	}
+	if shouldReinstall(d) {
+		reinstall(d, client, ctx, instanceId, diags, m)
+	}
+	return resourceInstanceRead(ctx, d, m)
+}
 
+func shouldUpdateInstanceValues(d *schema.ResourceData) bool {
+	updateChange := false
+	if d.HasChange("display_name") {
+		displayname := d.Get("display_name").(string)
+		if displayname != "" {
+			updateChange = true
+		}
+	}
+	return updateChange
+}
+
+func shouldReinstall(d *schema.ResourceData) bool {
+	reinstallChange := false
+	if d.HasChange("ssh_keys") {
+		sshKeys := d.Get("ssh_keys")
+		if sshKeys != nil {
+			reinstallChange = true
+		}
+	}
+
+	if d.HasChange("root_password") {
+		rootPassword := d.Get("root_password")
+		if rootPassword != nil {
+			reinstallChange = true
+		}
+	}
+
+	if d.HasChange("user_data") {
+		userData := d.Get("user_data").(string)
+		if userData != "" {
+			reinstallChange = true
+		}
+	}
+	if d.HasChange("image_id") {
+		imageId := d.Get("image_id").(string)
+		if imageId != "" {
+			reinstallChange = true
+		}
+	}
+	return reinstallChange
+}
+
+func updateInstanceValues(d *schema.ResourceData, client *openapi.APIClient, ctx context.Context, instanceId int64, diags diag.Diagnostics, m interface{}) diag.Diagnostics {
+
+	patchInstanceRequest := *openapi.NewPatchInstanceRequestWithDefaults()
+	displayName := d.Get("display_name").(string)
+	patchInstanceRequest.DisplayName = &displayName
+
+	res, httpResp, err := client.InstancesApi.
+		PatchInstance(context.Background(), instanceId).
+		PatchInstanceRequest(patchInstanceRequest).
+		XRequestId(uuid.NewV4().String()).Execute()
+
+	if err != nil {
+		return HandleResponseErrors(diags, httpResp)
+	} else if len(res.Data) != 1 {
+		return MultipleDataObjectsError(diags)
+	}
+	d.SetId(strconv.Itoa(int(res.Data[0].InstanceId)))
+	return diags
+}
+
+func reinstall(d *schema.ResourceData, client *openapi.APIClient, ctx context.Context, instanceId int64, diags diag.Diagnostics, m interface{}) diag.Diagnostics {
 	patchInstanceRequest := openapi.NewReinstallInstanceRequestWithDefaults()
 
 	if d.HasChange("ssh_keys") {
@@ -365,7 +434,6 @@ func resourceInstanceUpdate(ctx context.Context, d *schema.ResourceData, m inter
 				sshKeys64 = append(sshKeys64, int64(sshKey))
 			}
 			patchInstanceRequest.SshKeys = &sshKeys64
-			anyChange = true
 		}
 	}
 
@@ -374,7 +442,6 @@ func resourceInstanceUpdate(ctx context.Context, d *schema.ResourceData, m inter
 		if rootPassword != nil {
 			rootPassword64 := int64(rootPassword.(int))
 			patchInstanceRequest.RootPassword = &rootPassword64
-			anyChange = true
 		}
 	}
 
@@ -382,34 +449,26 @@ func resourceInstanceUpdate(ctx context.Context, d *schema.ResourceData, m inter
 		userData := d.Get("user_data").(string)
 		if userData != "" {
 			patchInstanceRequest.UserData = &userData
-			anyChange = true
 		}
 	}
 
 	imageId := d.Get("image_id").(string)
 	if imageId != "" {
 		patchInstanceRequest.ImageId = imageId
-		anyChange = true
 	}
 
-	if anyChange {
-		res, httpResp, err := client.InstancesApi.
-			ReinstallInstance(ctx, instanceId).
-			XRequestId(uuid.NewV4().String()).
-			ReinstallInstanceRequest(*patchInstanceRequest).
-			Execute()
+	res, httpResp, err := client.InstancesApi.
+		ReinstallInstance(ctx, instanceId).
+		XRequestId(uuid.NewV4().String()).
+		ReinstallInstanceRequest(*patchInstanceRequest).
+		Execute()
 
-		if err != nil {
-			return HandleResponseErrors(diags, httpResp)
-		} else if len(res.Data) != 1 {
-			return MultipleDataObjectsError(diags)
-		}
-
-		d.SetId(strconv.Itoa(int(res.Data[0].InstanceId)))
-
-		return resourceInstanceRead(ctx, d, m)
+	if err != nil {
+		return HandleResponseErrors(diags, httpResp)
+	} else if len(res.Data) != 1 {
+		return MultipleDataObjectsError(diags)
 	}
-
+	d.SetId(strconv.Itoa(int(res.Data[0].InstanceId)))
 	return diags
 }
 

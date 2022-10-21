@@ -44,8 +44,6 @@ build-only-debug:
 	go mod download
 	go build -gcflags="all=-N -l"  -o terraform-provider-contabo_$(VERSION)
 
-
-
 .PHONY: doc-preview
 doc-preview:
 	@echo "Preview your markdown documentation on this page: https://registry.terraform.io/tools/doc-preview"
