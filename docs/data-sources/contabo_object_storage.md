@@ -29,6 +29,7 @@ Manage S3 compatible Object Storage. With the Object Storage API you can create 
 - `created_date` (String) The creation date of the Object Storage.
 - `customer_id` (String) Your customer number.
 - `data_center` (String) Data center the object storage is located in.
+- `display_name` (String) Display name for object storage.
 - `region` (String) Region where the Object Storage should be located. Default region is the EU. Following regions are available: `EU`,`US-central`, `SIN`.
 - `s3_tenant_id` (String) Your S3 tenant Id. Only required for public sharing.
 - `s3_url` (String) S3 URL to connect to your S3 compatible Object Storage.

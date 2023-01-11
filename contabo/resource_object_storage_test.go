@@ -2,29 +2,37 @@ package contabo
 
 import (
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-// func TestAccContaboObjectStorageBasic(t *testing.T) {
-// 	resource.Test(t, resource.TestCase{
-// 		PreCheck:     func() { testAccPreCheck(t) },
-// 		Providers:    testAccProviders,
-// 		CheckDestroy: testAccCheckObjectStorageDestroy,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: testCheckContaboObjectStorageConfigBasic(),
-// 				Check: resource.ComposeTestCheckFunc(
-// 					testCheckContaboObjectStorageExists("contabo_object_storage.object_storage_eu"),
-// 				),
-// 				// ToDo: Object storage plan is not empty
-// 				ExpectNonEmptyPlan: true,
-// 			},
-// 		},
-// 	})
-// }
+func TestAccContaboObjectStorageBasic(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckObjectStorageDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testCheckContaboObjectStorageConfigBasic(),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckContaboObjectStorageExists("contabo_object_storage.object_storage_eu"),
+					resource.TestCheckResourceAttr(
+						"contabo_object_storage.object_storage_eu",
+						"total_purchased_space_tb", "0.25",
+					),
+					resource.TestCheckResourceAttr(
+						"contabo_object_storage.object_storage_eu",
+						"display_name", "terraform_test_object_storage_eu",
+					),
+				),
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
 
 func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	return nil
@@ -32,11 +40,10 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 
 func testCheckContaboObjectStorageConfigBasic() string {
 	return `
-		provider "contabo" {}
-
 		resource "contabo_object_storage" "object_storage_eu" {
 			region                   = "EU"
-			total_purchased_space_tb = 2
+			total_purchased_space_tb = 0.250
+			display_name			 = "terraform_test_object_storage_eu"
 		}
 	`
 }

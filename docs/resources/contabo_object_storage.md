@@ -47,6 +47,7 @@ resource "contabo_object_storage" "object_storage_eu" {
 ### Optional
 
 - `auto_scaling` (Block List) (see [below for nested schema](#nestedblock--auto_scaling))
+- `display_name` (String) Display name for object storage.
 
 ### Read-Only
 

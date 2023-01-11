@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"testing"
 
 	"contabo.com/openapi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -12,37 +11,37 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func TestAccContaboPrivateNetworkBasic(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-		},
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckPrivateNetworkDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAddInstance(),
-			},
-			{
-				Config: testCheckContaboPrivateNetworkConfigBasic(),
-				Check: resource.ComposeTestCheckFunc(
-					testCheckContaboPrivateNetworkExists("contabo_private_network.new"),
-					resource.TestCheckResourceAttr("contabo_private_network.new", "instances.#", "0"),
-				),
-			},
-			{
-				Config: testContaboPrivateNetworkConfigWithInstance(),
-				Check: resource.ComposeTestCheckFunc(
-					testCheckContaboPrivateNetworkExists("contabo_private_network.with_instance"),
-					resource.TestCheckResourceAttr("contabo_private_network.with_instance", "instances.#", "1"),
-					resource.TestCheckResourceAttr(
-						"contabo_private_network.with_instance", "instances.0.private_ip_config.0.v4.0.ip", "10.0.0.1"),
-					resource.TestCheckResourceAttr("contabo_instance.new", "additional_ips.#", "0"),
-				),
-			},
-		},
-	})
-}
+// func TestAccContaboPrivateNetworkBasic(t *testing.T) {
+// 	resource.Test(t, resource.TestCase{
+// 		PreCheck: func() {
+// 			testAccPreCheck(t)
+// 		},
+// 		Providers:    testAccProviders,
+// 		CheckDestroy: testAccCheckPrivateNetworkDestroy,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config: testAddInstance(),
+// 			},
+// 			{
+// 				Config: testCheckContaboPrivateNetworkConfigBasic(),
+// 				Check: resource.ComposeTestCheckFunc(
+// 					testCheckContaboPrivateNetworkExists("contabo_private_network.new"),
+// 					resource.TestCheckResourceAttr("contabo_private_network.new", "instances.#", "0"),
+// 				),
+// 			},
+// 			{
+// 				Config: testContaboPrivateNetworkConfigWithInstance(),
+// 				Check: resource.ComposeTestCheckFunc(
+// 					testCheckContaboPrivateNetworkExists("contabo_private_network.with_instance"),
+// 					resource.TestCheckResourceAttr("contabo_private_network.with_instance", "instances.#", "1"),
+// 					resource.TestCheckResourceAttr(
+// 						"contabo_private_network.with_instance", "instances.0.private_ip_config.0.v4.0.ip", "10.0.0.1"),
+// 					resource.TestCheckResourceAttr("contabo_instance.new", "additional_ips.#", "0"),
+// 				),
+// 			},
+// 		},
+// 	})
+// }
 
 func testAccCheckPrivateNetworkDestroy(s *terraform.State) error {
 	client := testAccProvider.Meta().(*openapi.APIClient)

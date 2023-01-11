@@ -96,6 +96,11 @@ func dataSourceObjectStorage() *schema.Resource {
 				Computed:    true,
 				Description: "Amount of purchased / requested object storage in terabyte.",
 			},
+			"display_name": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Display name for object storage.",
+			},
 		},
 	}
 }

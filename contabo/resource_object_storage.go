@@ -2,9 +2,8 @@ package contabo
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strconv"
+	"reflect"
 	"time"
 
 	"contabo.com/openapi"
@@ -21,7 +20,7 @@ func resourceObjectStorage() *schema.Resource {
 		UpdateContext: resourceObjectStorageUpgrade,
 		DeleteContext: resourceObjectStorageCancel,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -102,6 +101,13 @@ func resourceObjectStorage() *schema.Resource {
 				Required:    true,
 				Description: "Amount of purchased / requested object storage in terabyte.",
 			},
+			"display_name": {
+				Type:        schema.TypeString,
+				Required:    false,
+				Optional:    true,
+				Computed:    true,
+				Description: "Display name for object storage.",
+			},
 		},
 	}
 }
@@ -118,7 +124,7 @@ func resourceObjectStorageCreate(
 
 	objectStorageRegion := data.Get("region").(string)
 	objectStorageTotalPurchasedSpaceTB := data.Get("total_purchased_space_tb").(float64)
-	objectStorageAutoScaling, _ := StructToMap(data.Get("auto_scaling"))
+	objectStorageAutoScaling, err := TryFlattenSliceOfSingleMap(data.Get("auto_scaling"))
 
 	if err != nil {
 		return diag.FromErr(err)
@@ -129,18 +135,20 @@ func resourceObjectStorageCreate(
 	createObjectStorageRequest.Region = objectStorageRegion
 
 	if objectStorageAutoScaling != nil {
-		autoScalingState := fmt.Sprintf("%v", objectStorageAutoScaling["state"])
-		autoScalingLimit := fmt.Sprintf("%v", objectStorageAutoScaling["size_limit_tb"])
-		autoScalingLimitFloat, err := strconv.ParseFloat(autoScalingLimit, 64)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		autoScalingState := objectStorageAutoScaling["state"].(string)
+		autoScalingLimit := objectStorageAutoScaling["size_limit_tb"].(float64)
 
 		autoScaling := openapi.AutoScalingTypeRequest{
 			State:       autoScalingState,
-			SizeLimitTB: autoScalingLimitFloat,
+			SizeLimitTB: autoScalingLimit,
 		}
 		createObjectStorageRequest.AutoScaling = &autoScaling
+	}
+
+	displayName := data.Get("display_name").(string)
+
+	if displayName != "" {
+		createObjectStorageRequest.DisplayName = &displayName
 	}
 
 	res, httpResp, err := client.ObjectStoragesApi.
@@ -200,7 +208,7 @@ func resourceObjectStorageUpgrade(
 ) diag.Diagnostics {
 	var diags diag.Diagnostics
 	client := m.(*openapi.APIClient)
-	anyChange := false
+	doUpgrade := false
 
 	objectStorageId := data.Id()
 
@@ -209,42 +217,63 @@ func resourceObjectStorageUpgrade(
 	if data.HasChange("total_purchased_space_tb") {
 		newTotalPurchasedSpace := data.Get("total_purchased_space_tb").(float64)
 		upgradeObjectStoragaRequest.TotalPurchasedSpaceTB = &newTotalPurchasedSpace
-		anyChange = true
+		doUpgrade = true
 	}
 
 	if data.HasChange("auto_scaling") {
-		objectStorageAutoScaling, _ := StructToMap(data.Get("auto_scaling"))
-		autoScalingState := fmt.Sprintf("%v", objectStorageAutoScaling["state"])
-		autoScalingLimit := fmt.Sprintf("%v", objectStorageAutoScaling["size_limit_tb"])
-		autoScalingLimitFloat, err := strconv.ParseFloat(autoScalingLimit, 64)
+		objectStorageAutoScaling, err := TryFlattenSliceOfSingleMap(data.Get("auto_scaling"))
+
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		autoScaling := openapi.UpgradeAutoScalingType{}
-		if autoScalingState != "" && autoScalingLimitFloat != 0 {
-			autoScaling = openapi.UpgradeAutoScalingType{
-				State:       &autoScalingState,
-				SizeLimitTB: &autoScalingLimitFloat,
-			}
-		} else if autoScalingState != "" && autoScalingLimitFloat == 0 {
-			autoScaling = openapi.UpgradeAutoScalingType{
-				State: &autoScalingState,
-			}
-		} else if autoScalingState == "" && autoScalingLimitFloat != 0 {
-			autoScaling = openapi.UpgradeAutoScalingType{
-				SizeLimitTB: &autoScalingLimitFloat,
-			}
-		}
 
-		upgradeObjectStoragaRequest.AutoScaling = &autoScaling
+		if objectStorageAutoScaling != nil {
+			autoScalingState := objectStorageAutoScaling["state"].(string)
+			autoScalingLimit := objectStorageAutoScaling["size_limit_tb"].(float64)
+
+			autoScaling := openapi.UpgradeAutoScalingType{}
+
+			if autoScalingState != "" && autoScalingLimit != 0 {
+				autoScaling = openapi.UpgradeAutoScalingType{
+					State:       &autoScalingState,
+					SizeLimitTB: &autoScalingLimit,
+				}
+			} else if autoScalingState != "" && autoScalingLimit == 0 {
+				autoScaling = openapi.UpgradeAutoScalingType{
+					State: &autoScalingState,
+				}
+			} else if autoScalingState == "" && autoScalingLimit != 0 {
+				autoScaling = openapi.UpgradeAutoScalingType{
+					SizeLimitTB: &autoScalingLimit,
+				}
+			}
+
+			upgradeObjectStoragaRequest.AutoScaling = &autoScaling
+			doUpgrade = true
+		}
 	}
 
-	if anyChange {
+	if doUpgrade {
 		_, httpResp, err := client.ObjectStoragesApi.
 			UpgradeObjectStorage(ctx, objectStorageId).
 			XRequestId(uuid.NewV4().String()).
 			UpgradeObjectStorageRequest(*upgradeObjectStoragaRequest).
 			Execute()
+		if err != nil {
+			return HandleResponseErrors(diags, httpResp)
+		}
+
+		data.Set("last_updated", time.Now().Format(time.RFC850))
+	}
+
+	if data.HasChange("display_name") {
+		displayName := data.Get("display_name").(string)
+		patchObjectStorageRequest := openapi.NewPatchObjectStorageRequest(displayName)
+		_, httpResp, err := client.ObjectStoragesApi.UpdateObjectStorage(ctx, objectStorageId).
+			XRequestId(uuid.NewV4().String()).
+			PatchObjectStorageRequest(*patchObjectStorageRequest).
+			Execute()
+
 		if err != nil {
 			return HandleResponseErrors(diags, httpResp)
 		}
@@ -318,8 +347,10 @@ func AddObjectStorageToData(
 		return diag.FromErr(err)
 	}
 	autoScaling := BuildAutoScaling(&objectStorage.AutoScaling)
-
 	if err := d.Set("auto_scaling", autoScaling); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("display_name", objectStorage.DisplayName); err != nil {
 		return diag.FromErr(err)
 	}
 	return diags
@@ -338,11 +369,37 @@ func BuildAutoScaling(autoScalingResponse *openapi.AutoScalingTypeResponse) inte
 	return nil
 }
 
-func StructToMap(obj interface{}) (newMap map[string]interface{}, err error) {
-	data, err := json.Marshal(obj) // Convert to a json string
-	if err != nil {
-		return
+// Attention! returns `nil` if input is `nil`
+func TryFlattenSliceOfSingleMap(obj interface{}) (map[string]interface{}, error) {
+	if obj == nil {
+		return nil, nil
 	}
-	err = json.Unmarshal(data, &newMap) // Convert to a map
-	return
+
+	rv := reflect.ValueOf(obj)
+
+	if rv.Kind() != reflect.Slice {
+		return nil, fmt.Errorf("[TryFlattenSliceOfSingleMap] provided value '%v' was not a slice nor map", obj)
+	}
+
+	if rv.Len() == 0 {
+		return nil, nil
+	} else if rv.Len() > 1 {
+		return nil, fmt.Errorf("[TryFlattenSliceOfSingleMap] provided slice '%v' has not exacly one item", obj)
+	}
+
+	maybeMap := reflect.ValueOf(rv.Index(0).Interface())
+
+	if maybeMap.Kind() != reflect.Map {
+		return nil, fmt.Errorf("[TryFlattenSliceOfSingleMap] the item in provided slice '%v' was not a map[string]interface{}", obj)
+	}
+
+	var out = make(map[string]interface{})
+
+	for _, key := range maybeMap.MapKeys() {
+		strct := maybeMap.MapIndex(key)
+		out[key.String()] = strct.Interface()
+	}
+
+	return out, nil
+
 }
