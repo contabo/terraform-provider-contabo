@@ -10,6 +10,11 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+const (
+	DOWNLOADING string = "downloading"
+	ERROR string = "error"
+)
+
 func resourceImage() *schema.Resource {
 	return &schema.Resource{
 		Description:   "In order to provide a custom image, please specify an URL from which the image can be downloaded directly. A custom image must be in either `.iso` or `.qcow2` format. Other formats will be rejected. Please note that downloading can take a while depending on network speed resp. bandwidth and size of image. You can check the status by retrieving information about the image via a GET request. Download will be rejected if you have exceeded your limits.",
@@ -45,6 +50,7 @@ func resourceImage() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "URL from which the image has been downloaded.",
+				ForceNew:    true,
 			},
 			"uploaded_size_mb": {
 				Type:        schema.TypeInt,
@@ -71,11 +77,11 @@ func resourceImage() *schema.Resource {
 				Computed:    true,
 				Description: "Downloading status of the image (`downloading`, `downloaded` or `error`).",
 			},
-			"remove_on_update": {
+			"archive_on_update": {
 				Type:        schema.TypeBool,
-				Default:     false,
+				Default:     true,
 				Optional:    true,
-				Description: "When url changes, the image will be removed before re-downloaded.",
+				Description: "When iso url changes, the image will be kept in storage",
 			},
 			"error_message": {
 				Type:        schema.TypeString,
@@ -193,11 +199,13 @@ func resourceImageUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 
 	if d.HasChange("image_url") {
 
-		if d.Get("remove_on_update").(bool) {
+		if !d.Get("archive_on_update").(bool) {
 			resourceImageDelete(ctx, d, m)
 		}
 
-		return resourceImageCreate(ctx, d, m)
+		diags := resourceImageCreate(ctx, d, m)
+
+		return diags
 	}
 
 	if anyChange {
@@ -302,10 +310,15 @@ func pollImageDownloaded(
 
 	status := res.Data[0].Status
 
-	if status == "downloading" {
+	if status == ERROR {
+		return nil, HandleDownloadErrors(diags)
+	}
+
+	if status == DOWNLOADING {
 		time.Sleep(time.Second)
 		return pollImageDownloaded(diags, client, ctx, imageId)
 	}
 
 	return &res.Data[0], nil
 }
+

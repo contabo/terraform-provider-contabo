@@ -63,3 +63,13 @@ func MultipleDataObjectsError(
 		Detail:   "The API response for a specific object contained multiple objects.",
 	})
 }
+
+func HandleDownloadErrors(
+	diags diag.Diagnostics,
+) diag.Diagnostics {
+	return append(diags, diag.Diagnostic{
+		Severity: diag.Error,
+		Summary:  "Download error, check the image url availability and retry",
+		Detail:   "Download error, check the image url availability and retry",
+	})
+}

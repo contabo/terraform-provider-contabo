@@ -26,6 +26,7 @@ func resourceInstance() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The identifier of the compute instance. Use it to manage it!",
+				
 			},
 			"existing_instance_id": {
 				Type:        schema.TypeString,
@@ -275,6 +276,8 @@ func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m inter
 
 		return resourceInstanceUpdate(ctx, d, m)
 	}
+
+	panic("zizou")
 
 	createInstanceRequest := openapi.NewCreateInstanceRequestWithDefaults()
 
