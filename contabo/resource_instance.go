@@ -277,8 +277,6 @@ func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m inter
 		return resourceInstanceUpdate(ctx, d, m)
 	}
 
-	panic("zizou")
-
 	createInstanceRequest := openapi.NewCreateInstanceRequestWithDefaults()
 
 	displayName := d.Get("display_name").(string)
