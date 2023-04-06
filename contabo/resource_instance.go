@@ -25,6 +25,7 @@ func resourceInstance() *schema.Resource {
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Optional:    true,
 				Description: "The identifier of the compute instance. Use it to manage it!",
 			},
 			"last_updated": {
@@ -261,6 +262,14 @@ func resourceInstance() *schema.Resource {
 func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 	client := m.(*openapi.APIClient)
+
+	id := d.Get("id").(string)
+
+	if id != "" {
+		d.SetId(id)
+
+		return resourceInstanceRead(ctx, d, m)
+	}
 
 	createInstanceRequest := openapi.NewCreateInstanceRequestWithDefaults()
 

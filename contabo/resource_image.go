@@ -147,6 +147,15 @@ func resourceImageRead(ctx context.Context, d *schema.ResourceData, m interface{
 		XRequestId(uuid.NewV4().String()).
 		Execute()
 
+	pollImageDownloaded(ctx, client, imageId)
+
+	image, diag := pollImageDownloaded(diags, client, ctx, instanceId)
+
+	if err != nil || image == nil {
+		diags = append(diags, diag...)
+		return AddImageToData(res.Data[0], d, diags)
+	}
+
 	if err != nil {
 		return HandleResponseErrors(diags, httpResp)
 	} else if len(res.Data) != 1 {
@@ -174,6 +183,12 @@ func resourceImageUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 		newDescription := d.Get("description").(string)
 		updateImageRequest.Description = &newDescription
 		anyChange = true
+	}
+
+	if d.HasChange("image_url") {
+		_ := resourceImageDelete(ctx, d, m)
+
+		return resourceImageCreate(ctx, d, m)
 	}
 
 	if anyChange {
@@ -257,4 +272,31 @@ func AddImageToData(
 	}
 
 	return diags
+}
+
+func pollImageDownloaded(
+	diags diag.Diagnostics,
+	client *openapi.APIClient,
+	ctx context.Context,
+	imageId int64,
+) (*openapi.ImageResponse, diag.Diagnostics) {
+	res, httpResp, err := client.InstancesApi.
+		RetrieveImage(ctx, imageId).
+		XRequestId(uuid.NewV4().String()).
+		Execute()
+
+	if err != nil {
+		return nil, HandleResponseErrors(diags, httpResp)
+	} else if len(res.Data) != 1 {
+		return nil, MultipleDataObjectsError(diags)
+	}
+
+	status := res.Data[0].Status
+
+	if status == openapi.DOWNLOADING {
+		time.Sleep(time.Second)
+		return pollImageDownloaded(diags, client, ctx, imageId)
+	}
+
+	return &res.Data[0], nil
 }
