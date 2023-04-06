@@ -147,9 +147,9 @@ func resourceImageRead(ctx context.Context, d *schema.ResourceData, m interface{
 		XRequestId(uuid.NewV4().String()).
 		Execute()
 
-	pollImageDownloaded(ctx, client, imageId)
+	pollImageDownloaded(diags, client, ctx, imageId)
 
-	image, diag := pollImageDownloaded(diags, client, ctx, instanceId)
+	image, diag := pollImageDownloaded(diags, client, ctx, imageId)
 
 	if err != nil || image == nil {
 		diags = append(diags, diag...)
@@ -186,7 +186,7 @@ func resourceImageUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 
 	if d.HasChange("image_url") {
-		_ := resourceImageDelete(ctx, d, m)
+		resourceImageDelete(ctx, d, m)
 
 		return resourceImageCreate(ctx, d, m)
 	}
@@ -278,9 +278,9 @@ func pollImageDownloaded(
 	diags diag.Diagnostics,
 	client *openapi.APIClient,
 	ctx context.Context,
-	imageId int64,
+	imageId string,
 ) (*openapi.ImageResponse, diag.Diagnostics) {
-	res, httpResp, err := client.InstancesApi.
+	res, httpResp, err := client.ImagesApi.
 		RetrieveImage(ctx, imageId).
 		XRequestId(uuid.NewV4().String()).
 		Execute()
@@ -293,7 +293,7 @@ func pollImageDownloaded(
 
 	status := res.Data[0].Status
 
-	if status == openapi.DOWNLOADING {
+	if status == "downloading" {
 		time.Sleep(time.Second)
 		return pollImageDownloaded(diags, client, ctx, imageId)
 	}
