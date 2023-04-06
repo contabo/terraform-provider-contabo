@@ -71,6 +71,12 @@ func resourceImage() *schema.Resource {
 				Computed:    true,
 				Description: "Downloading status of the image (`downloading`, `downloaded` or `error`).",
 			},
+			"remove_on_update": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "When url changes, the image will be removed before re-downloaded.",
+			},
 			"error_message": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -186,7 +192,10 @@ func resourceImageUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 
 	if d.HasChange("image_url") {
-		resourceImageDelete(ctx, d, m)
+
+		if d.Get("remove_on_update").(bool) {
+			resourceImageDelete(ctx, d, m)
+		}
 
 		return resourceImageCreate(ctx, d, m)
 	}

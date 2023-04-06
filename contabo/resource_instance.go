@@ -25,8 +25,13 @@ func resourceInstance() *schema.Resource {
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Optional:    true,
 				Description: "The identifier of the compute instance. Use it to manage it!",
+			},
+			"existing_instance_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "The identifier of the existing compute instance. (override id)",
 			},
 			"last_updated": {
 				Type:        schema.TypeString,
@@ -263,12 +268,12 @@ func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m inter
 	var diags diag.Diagnostics
 	client := m.(*openapi.APIClient)
 
-	id := d.Get("id").(string)
+	extstingId := d.Get("existing_instance_id").(string)
 
-	if id != "" {
-		d.SetId(id)
+	if extstingId != "" {
+		d.SetId(extstingId)
 
-		return resourceInstanceRead(ctx, d, m)
+		return resourceInstanceUpdate(ctx, d, m)
 	}
 
 	createInstanceRequest := openapi.NewCreateInstanceRequestWithDefaults()
