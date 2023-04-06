@@ -77,12 +77,6 @@ func resourceImage() *schema.Resource {
 				Computed:    true,
 				Description: "Downloading status of the image (`downloading`, `downloaded` or `error`).",
 			},
-			"archive_on_update": {
-				Type:        schema.TypeBool,
-				Default:     true,
-				Optional:    true,
-				Description: "When iso url changes, the image will be kept in storage",
-			},
 			"error_message": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -159,8 +153,6 @@ func resourceImageRead(ctx context.Context, d *schema.ResourceData, m interface{
 		XRequestId(uuid.NewV4().String()).
 		Execute()
 
-	pollImageDownloaded(diags, client, ctx, imageId)
-
 	image, diag := pollImageDownloaded(diags, client, ctx, imageId)
 
 	if err != nil || image == nil {
@@ -195,17 +187,6 @@ func resourceImageUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 		newDescription := d.Get("description").(string)
 		updateImageRequest.Description = &newDescription
 		anyChange = true
-	}
-
-	if d.HasChange("image_url") {
-
-		if !d.Get("archive_on_update").(bool) {
-			resourceImageDelete(ctx, d, m)
-		}
-
-		diags := resourceImageCreate(ctx, d, m)
-
-		return diags
 	}
 
 	if anyChange {
