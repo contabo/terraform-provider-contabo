@@ -69,7 +69,7 @@ func HandleDownloadErrors(
 ) diag.Diagnostics {
 	return append(diags, diag.Diagnostic{
 		Severity: diag.Error,
-		Summary:  "Download error, check the image url availability and retry",
-		Detail:   "Download error, check the image url availability and retry",
+		Summary:  "Download error, check the url availability and retry",
+		Detail:   "Download error, check the url availability and retry",
 	})
 }
