@@ -278,10 +278,10 @@ func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m inter
 		createInstanceRequest.DisplayName = &displayName
 	}
 	if imageId != "" {
-		createInstanceRequest.ImageId = imageId
+		createInstanceRequest.ImageId = &imageId
 	}
 	if region != "" {
-		createInstanceRequest.Region = region
+		createInstanceRequest.Region = &region
 	}
 	if productId != "" {
 		createInstanceRequest.ProductId = productId
@@ -498,7 +498,7 @@ func AddInstanceToData(
 	if err := d.Set("product_id", instance.ProductId); err != nil {
 		return diag.FromErr(err)
 	}
-	ipConfig := buildIpConfig(instance.IpConfig)
+	ipConfig := buildIpConfig(&instance.IpConfig)
 	if err := d.Set("ip_config", ipConfig); err != nil && len(ipConfig) > 0 {
 		return diag.FromErr(err)
 	}
@@ -552,7 +552,7 @@ func AddInstanceToData(
 	return diags
 }
 
-func buildIpConfig(ipConfigResponse *openapi.IpConfig2) []interface{} {
+func buildIpConfig(ipConfigResponse *openapi.IpConfig) []interface{} {
 	if ipConfigResponse != nil {
 		ipConfig := make(map[string]interface{})
 

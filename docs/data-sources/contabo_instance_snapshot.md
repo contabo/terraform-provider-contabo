@@ -31,5 +31,3 @@ description: |-
 - `created_date` (String) The creation date of this instance snapshot.
 - `image_id` (String) Id of the Image the snapshot was taken from.
 - `image_name` (String) Name of the Image the snapshot was taken from.
-
-

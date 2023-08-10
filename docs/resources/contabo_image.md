@@ -57,5 +57,3 @@ resource "contabo_image" "custom_image_alpine" {
 - `standard_image` (Boolean) Flag indicating that the image is either a standard (true) or a custom image (false).
 - `status` (String) Downloading status of the image (`downloading`, `downloaded` or `error`).
 - `uploaded_size_mb` (Number) The size of the uploaded image in megabyte.
-
-

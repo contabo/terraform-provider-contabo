@@ -29,5 +29,3 @@ Manage buckets on your contabo Object Storage. With this resource you are able t
 - `creation_date` (String) The creation date of the bucket.
 - `id` (String) The identifier of the Object Storage. Use it to manage it!
 - `public_sharing_link` (String) If your bucket is publicly shared, you can access it with this link.
-
-

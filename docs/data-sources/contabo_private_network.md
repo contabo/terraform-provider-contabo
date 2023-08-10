@@ -60,5 +60,3 @@ Read-Only:
 - `gateway` (String)
 - `ip` (String)
 - `netmask_cidr` (Number)
-
-

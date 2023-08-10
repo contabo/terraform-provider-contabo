@@ -51,5 +51,3 @@ resource "contabo_secret" "rootPassword" {
 ### Read-Only
 
 - `id` (String) The identifier of the secret. Use it to manage it!
-
-

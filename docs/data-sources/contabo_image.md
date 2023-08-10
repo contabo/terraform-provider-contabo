@@ -35,5 +35,3 @@ In order to provide a custom image, please specify an URL from which the image c
 - `status` (String) Downloading status of the image (`downloading`, `downloaded` or `error`).
 - `uploaded_size_mb` (Number) The size of the uploaded image in megabyte.
 - `version` (String) Version number to distinguish the contents of an image e.g. the version of the operating system.
-
-

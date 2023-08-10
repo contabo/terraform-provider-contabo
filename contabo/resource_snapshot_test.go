@@ -3,7 +3,9 @@ package contabo
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
+	"testing"
 
 	"contabo.com/openapi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -13,21 +15,25 @@ import (
 
 var instanceId int64 = 10001001
 
-// func TestAccContaboSnapshotBasic(t *testing.T) {
-// 	resource.Test(t, resource.TestCase{
-// 		PreCheck:     func() { testAccPreCheck(t) },
-// 		Providers:    testAccProviders,
-// 		CheckDestroy: testAccCheckInstanceSnapshotDestroy,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: testCheckContaboInstanceSnapshotConfigBasic(),
-// 				Check: resource.ComposeTestCheckFunc(
-// 					testCheckContaboInstanceSnapshotExists("contabo_instance_snapshot.new"),
-// 				),
-// 			},
-// 		},
-// 	})
-// }
+func TestAccContaboSnapshotBasic(t *testing.T) {
+	// We have to skip the test on prod, because our test vhost (v_host_id = 14174) is suspended on prod, if it will not be suspended it is possible that customer will be provisioned on it... :)
+	if os.Getenv("SKIP_PROD") != "" {
+		t.Skip("Skipping not finished test")
+	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckInstanceSnapshotDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testCheckContaboInstanceSnapshotConfigBasic(),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckContaboInstanceSnapshotExists("contabo_instance_snapshot.new"),
+				),
+			},
+		},
+	})
+}
 
 func testAccCheckInstanceSnapshotDestroy(s *terraform.State) error {
 	client := testAccProvider.Meta().(*openapi.APIClient)

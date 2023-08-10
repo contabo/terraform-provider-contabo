@@ -50,5 +50,3 @@ resource "contabo_instance_snapshot" "snapshotInstance42" {
 - `auto_delete_date` (String) The date when the snapshot will be autmatically deleted.
 - `image_id` (String) Id of the Image the snapshot was taken from.
 - `image_name` (String) Name of the Image the snapshot was taken from.
-
-

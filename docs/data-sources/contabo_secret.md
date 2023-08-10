@@ -29,5 +29,3 @@ The Secret Management API allows you to store and manage your passwords and ssh-
 ### Read-Only
 
 - `id` (String) The identifier of the secret. Use it to manage it!
-
-

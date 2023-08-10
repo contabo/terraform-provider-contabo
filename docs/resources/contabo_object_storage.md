@@ -69,5 +69,3 @@ Optional:
 - `error_message` (String) If the autoscaling is in an error state (see status property), the error message can be seen in this field.
 - `size_limit_tb` (Number) Autoscaling size limit for the current object storage.
 - `state` (String) Status of this object storage.  It can be set to `enabled`, `disabled` or `error`.
-
-

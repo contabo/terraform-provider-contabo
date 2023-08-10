@@ -171,7 +171,7 @@ func resourcePrivateNetworkCreate(
 	createPrivateNetworkRequest := openapi.NewCreatePrivateNetworkRequestWithDefaults()
 	createPrivateNetworkRequest.Name = privateNetworkName
 	createPrivateNetworkRequest.Description = &privateNetworkDescription
-	createPrivateNetworkRequest.Region = privateNetworkRegion
+	createPrivateNetworkRequest.Region = &privateNetworkRegion
 
 	res, httpResp, err := client.PrivateNetworksApi.
 		CreatePrivateNetwork(context.Background()).
@@ -351,32 +351,38 @@ func handleInstanceChanges(diags diag.Diagnostics,
 	//Remove instances which are not more in this private network
 	old, new := d.GetChange("instance_ids")
 	oldInstanceIds := old.(*schema.Set).List()
+	newInstanceIds := new.(*schema.Set).List()
 	for _, instanceId := range oldInstanceIds {
 		instanceIdInt := instanceId.(int)
-		instanceId := int64(instanceIdInt)
+		instanceId64Int := int64(instanceIdInt)
 
-		httpResp, err := unassignInstanceToPrivateNetwork(diags, client, privateNetworkId, instanceId)
-		if err != nil {
-			return HandleResponseErrors(diags, httpResp)
+		if !new.(*schema.Set).Contains(instanceId) {
+			httpResp, err := unassignInstanceToPrivateNetwork(diags, client, privateNetworkId, instanceId64Int)
+			if err != nil {
+				return HandleResponseErrors(diags, httpResp)
+			}
 		}
+
 	}
 
 	//Add new instances which are now in this private network
-	newInstanceIds := new.(*schema.Set).List()
 	for _, instanceId := range newInstanceIds {
 		instanceIdInt := instanceId.(int)
-		instanceId := int64(instanceIdInt)
+		instanceId64Int := int64(instanceIdInt)
 
-		httpResp, err := retryAddPrivateNetworkAddOnToInstance(diags, client, instanceId, 0)
+		if !old.(*schema.Set).Contains(instanceId) {
+			httpResp, err := retryAddPrivateNetworkAddOnToInstance(diags, client, instanceId64Int, 0)
 
-		if err != nil && !strings.Contains(err.Error(), httpConflict) {
-			return HandleResponseErrors(diags, httpResp)
+			if err != nil && !strings.Contains(err.Error(), httpConflict) {
+				return HandleResponseErrors(diags, httpResp)
+			}
+
+			httpResp, err = assignInstanceToPrivateNetwork(diags, client, privateNetworkId, instanceId64Int)
+			if err != nil {
+				return HandleResponseErrors(diags, httpResp)
+			}
 		}
 
-		httpResp, err = assignInstanceToPrivateNetwork(diags, client, privateNetworkId, instanceId)
-		if err != nil {
-			return HandleResponseErrors(diags, httpResp)
-		}
 	}
 	return nil
 }
