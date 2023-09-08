@@ -5,9 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
+
+var displayName = (uuid.New()).String()
 
 func TestAccContaboObjectStorageBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -25,7 +28,7 @@ func TestAccContaboObjectStorageBasic(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr(
 						"contabo_object_storage.object_storage_eu",
-						"display_name", "terraform_test_object_storage_eu",
+						"display_name", displayName,
 					),
 				),
 				ExpectNonEmptyPlan: true,
@@ -43,7 +46,7 @@ func testCheckContaboObjectStorageConfigBasic() string {
 		resource "contabo_object_storage" "object_storage_eu" {
 			region                   = "EU"
 			total_purchased_space_tb = 0.250
-			display_name			 = "terraform_test_object_storage_eu"
+			display_name			 = "` + displayName + `"
 		}
 	`
 }

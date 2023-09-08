@@ -16,7 +16,7 @@ func dataSourceObjectStorageBucket() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Description: "The name of your bucket, consider the naming restriction https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-s3-bucket-naming-requirements.html.",
-				Required:    true,
+				Optional:    true,
 			},
 			"object_storage_id": {
 				Type:        schema.TypeString,

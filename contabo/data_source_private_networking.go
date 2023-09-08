@@ -29,8 +29,8 @@ func dataSourcePrivateNetwork() *schema.Resource {
 			},
 			"id": {
 				Type:        schema.TypeString,
-				Computed:    true,
 				Description: "The identifier of the Private Network. Use it to manage it!",
+				Required:    true,
 			},
 			"name": {
 				Type:        schema.TypeString,

@@ -17,9 +17,7 @@ The Secret Management API allows you to store and manage your passwords and ssh-
 
 ### Required
 
-- `name` (String) Name of the secret.
-- `type` (String) The type of the secret. It will be available only when retrieving secrets, following types are allowed: `ssh`, `password`.
-- `value` (String) The value of the secret. It will be available only when retrieving a single secret.
+- `id` (String) The identifier of the secret. Use it to manage it!
 
 ### Optional
 
@@ -28,4 +26,6 @@ The Secret Management API allows you to store and manage your passwords and ssh-
 
 ### Read-Only
 
-- `id` (String) The identifier of the secret. Use it to manage it!
+- `name` (String) Name of the secret.
+- `type` (String) The type of the secret. It will be available only when retrieving secrets, following types are allowed: `ssh`, `password`.
+- `value` (String) The value of the secret. It will be available only when retrieving a single secret.

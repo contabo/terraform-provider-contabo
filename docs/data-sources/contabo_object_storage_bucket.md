@@ -17,11 +17,11 @@ Manage buckets on your contabo Object Storage. With this resource you are able t
 
 ### Required
 
-- `name` (String) The name of your bucket, consider the naming restriction https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-s3-bucket-naming-requirements.html.
 - `object_storage_id` (String) The contabo objectStorageId on which the bucket should be created.
 
 ### Optional
 
+- `name` (String) The name of your bucket, consider the naming restriction https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-s3-bucket-naming-requirements.html.
 - `public_sharing` (Boolean) Choose the access to your bucket. You can not share it at all or share it publicly.
 
 ### Read-Only

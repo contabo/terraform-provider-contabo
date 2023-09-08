@@ -19,7 +19,7 @@ func resourceSecret() *schema.Resource {
 		UpdateContext: resourceSecretUpdate,
 		DeleteContext: resourceSecretDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"created_at": &schema.Schema{

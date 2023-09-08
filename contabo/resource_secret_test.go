@@ -7,10 +7,12 @@ import (
 	"testing"
 
 	"contabo.com/openapi"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	uuid "github.com/satori/go.uuid"
 )
+
+var secretName = (uuid.New()).String()
 
 func TestAccContaboSecretBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -45,7 +47,7 @@ func testAccCheckSecretDestroy(s *terraform.State) error {
 
 		_, _, err := client.SecretsApi.
 			RetrieveSecret(context.Background(), secretId).
-			XRequestId(uuid.NewV4().String()).
+			XRequestId((uuid.New()).String()).
 			Execute()
 		if err == nil {
 			fmt.Printf("SECRET %v Still Exists: %v", secretId, err.Error())
@@ -61,7 +63,7 @@ func testCheckContaboSecretConfigBasic() string {
 		provider "contabo" {}
 
 		resource "contabo_secret" "new" {
-		name        = "my_secret"
+		name        = "` + secretName + `"
 		type        = "password"
 		value 		= "AllCombinationPassword123?#"
 		}

@@ -7,10 +7,15 @@ import (
 	"testing"
 
 	"contabo.com/openapi"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	uuid "github.com/satori/go.uuid"
 )
+
+var instanceDisplayName = (uuid.New()).String()
+var anotherInstanceDisplayName = (uuid.New()).String()
+var privateNetworkName = (uuid.New()).String()
+var privateNetworkWithInstanceName = (uuid.New()).String()
 
 func TestAccContaboPrivateNetworkBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -61,7 +66,7 @@ func testAccCheckPrivateNetworkDestroy(s *terraform.State) error {
 
 		_, _, err := client.PrivateNetworksApi.
 			RetrievePrivateNetwork(context.Background(), privateNetworktId).
-			XRequestId(uuid.NewV4().String()).
+			XRequestId((uuid.New()).String()).
 			Execute()
 		if err == nil {
 			fmt.Printf("Private Network %v Still Exists: %v", privateNetworktId, err.Error())
@@ -75,7 +80,7 @@ func testAccCheckPrivateNetworkDestroy(s *terraform.State) error {
 func testAddInstance() string {
 	return `
 		resource "contabo_instance" "new" {
-			display_name = "custom terraform"
+			display_name = "` + instanceDisplayName + `"
 		}
 	`
 }
@@ -83,7 +88,7 @@ func testAddInstance() string {
 func testCheckContaboPrivateNetworkConfigBasic() string {
 	return `
 		resource "contabo_private_network" "new" {
-			name        = "terraform-test-private-network"
+			name        = "` + privateNetworkName + `"
 			description = "terraform test private network"
 			region 		= "EU"
 		}
@@ -93,11 +98,11 @@ func testCheckContaboPrivateNetworkConfigBasic() string {
 func testContaboPrivateNetworkConfigWithInstance() string {
 	return `
 		resource "contabo_instance" "new" {
-			display_name = "custom terraform"
+			display_name = "` + anotherInstanceDisplayName + `"
 		}
 
 		resource "contabo_private_network" "with_instance" {
-			name			= "terraform-test-private-network-with-instance"
+			name			= "` + privateNetworkWithInstanceName + `"
 			region			= "EU"
 			instance_ids 	= [
 				contabo_instance.new.id
