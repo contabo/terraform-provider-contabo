@@ -10,6 +10,11 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+const (
+	DOWNLOADING string = "downloading"
+	ERROR string = "error"
+)
+
 func resourceImage() *schema.Resource {
 	return &schema.Resource{
 		Description:   "In order to provide a custom image, please specify an URL from which the image can be downloaded directly. A custom image must be in either `.iso` or `.qcow2` format. Other formats will be rejected. Please note that downloading can take a while depending on network speed resp. bandwidth and size of image. You can check the status by retrieving information about the image via a GET request. Download will be rejected if you have exceeded your limits.",
@@ -45,6 +50,7 @@ func resourceImage() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "URL from which the image has been downloaded.",
+				ForceNew:    true,
 			},
 			"uploaded_size_mb": {
 				Type:        schema.TypeInt,
@@ -146,6 +152,13 @@ func resourceImageRead(ctx context.Context, d *schema.ResourceData, m interface{
 		RetrieveImage(ctx, imageId).
 		XRequestId(uuid.NewV4().String()).
 		Execute()
+
+	image, diag := pollImageDownloaded(diags, client, ctx, imageId)
+
+	if err != nil || image == nil {
+		diags = append(diags, diag...)
+		return AddImageToData(res.Data[0], d, diags)
+	}
 
 	if err != nil {
 		return HandleResponseErrors(diags, httpResp)
@@ -258,3 +271,35 @@ func AddImageToData(
 
 	return diags
 }
+
+func pollImageDownloaded(
+	diags diag.Diagnostics,
+	client *openapi.APIClient,
+	ctx context.Context,
+	imageId string,
+) (*openapi.ImageResponse, diag.Diagnostics) {
+	res, httpResp, err := client.ImagesApi.
+		RetrieveImage(ctx, imageId).
+		XRequestId(uuid.NewV4().String()).
+		Execute()
+
+	if err != nil {
+		return nil, HandleResponseErrors(diags, httpResp)
+	} else if len(res.Data) != 1 {
+		return nil, MultipleDataObjectsError(diags)
+	}
+
+	status := res.Data[0].Status
+
+	if status == ERROR {
+		return nil, HandleDownloadErrors(diags)
+	}
+
+	if status == DOWNLOADING {
+		time.Sleep(time.Second)
+		return pollImageDownloaded(diags, client, ctx, imageId)
+	}
+
+	return &res.Data[0], nil
+}
+
