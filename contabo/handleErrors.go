@@ -11,7 +11,7 @@ import (
 )
 
 type ApiError struct {
-	StatusCode uint16 `json:"statusCode`
+	StatusCode uint16 `json:"statusCode"`
 	Message    string `json:"message"`
 }
 
