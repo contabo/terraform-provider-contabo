@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -34,7 +33,7 @@ func cacheToken(token *oauth2.Token) {
 
 func RestoreTokenFromCache() *oauth2.Token {
 	tokenCacheFileName := getCacheFile()
-	serializedToken, err := ioutil.ReadFile(tokenCacheFileName)
+	serializedToken, err := os.ReadFile(tokenCacheFileName)
 	if err != nil {
 		return nil
 	}
