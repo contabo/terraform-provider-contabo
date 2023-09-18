@@ -2,7 +2,7 @@ package oauth2Client
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,7 +15,6 @@ func GetJwtToken(
 	username string,
 	password *string,
 ) {
-
 	strings.NewReader(`asd {{ apiUrl }}`)
 
 	urlEncodedUsername := url.QueryEscape(username)
@@ -25,7 +24,6 @@ func GetJwtToken(
 
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", authUrl, payload)
-
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -39,7 +37,7 @@ func GetJwtToken(
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
 		return

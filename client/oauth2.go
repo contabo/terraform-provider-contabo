@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -25,7 +24,7 @@ func BearerHttpClient(
 ) (*http.Client, error) {
 	ctx := context.Background()
 	configuration := &oauth2.Config{
-		ClientID: clientId,
+		ClientID:     clientId,
 		ClientSecret: clientSecret,
 		Endpoint: oauth2.Endpoint{
 			TokenURL: authUrl,
@@ -34,7 +33,6 @@ func BearerHttpClient(
 
 	// check if token has been cached
 	token, err := RestoreTokenFromCache()
-
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +84,7 @@ func RestoreTokenFromCache() (*oauth2.Token, error) {
 		return nil, err
 	}
 
-	serializedToken, err := ioutil.ReadFile(*tokenCacheFileName)
+	serializedToken, err := os.ReadFile(*tokenCacheFileName)
 	if err != nil {
 		return nil, nil
 	}

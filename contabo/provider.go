@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,37 +20,37 @@ var userId string
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"api": &schema.Schema{
+			"api": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_API", "https://api.contabo.com"),
 				Description: "The api endpoint is https://api.contabo.com.",
 			},
-			"oauth2_token_url": &schema.Schema{
+			"oauth2_token_url": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_TOKEN_URL", "https://auth.contabo.com/auth/realms/contabo/protocol/openid-connect/token"),
 				Description: "The oauth2 token url is https://auth.contabo.com/auth/realms/contabo/protocol/openid-connect/token.",
 			},
-			"oauth2_client_id": &schema.Schema{
+			"oauth2_client_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_CLIENT_ID", nil),
 				Description: "Your oauth2 client id can be found in the [Customer Control Panel](https://new.contabo.com/account/security) under the menu item account secret.",
 			},
-			"oauth2_client_secret": &schema.Schema{
+			"oauth2_client_secret": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_CLIENT_SECRET", nil),
 				Description: "Your oauth2 client secret can be found in the [Customer Control Panel](https://new.contabo.com/account/security) under the menu item account secret.",
 			},
-			"oauth2_user": &schema.Schema{
+			"oauth2_user": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_USER", nil),
 				Description: "API User (your email address to login to the [Customer Control Panel](https://new.contabo.com/account/security) under the menu item account secret.",
 			},
-			"oauth2_pass": &schema.Schema{
+			"oauth2_pass": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CNTB_OAUTH2_PASS", nil),
@@ -192,7 +192,7 @@ func GetJwtToken(
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return jwtToken, diag.FromErr(err)
 	}

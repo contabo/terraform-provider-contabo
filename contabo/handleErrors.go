@@ -3,7 +3,7 @@ package contabo
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
@@ -11,7 +11,7 @@ import (
 )
 
 type ApiError struct {
-	StatusCode uint16 `json:"statusCode`
+	StatusCode uint16 `json:"statusCode"`
 	Message    string `json:"message"`
 }
 
@@ -23,9 +23,7 @@ func HandleResponseErrors(
 	var responseBody []byte
 	var err error
 
-	if httpResp != nil {
-		responseBody, err = ioutil.ReadAll(httpResp.Body)
-	} else {
+	if httpResp == nil {
 		return append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  "Unexpected API error, no http response",
@@ -33,6 +31,7 @@ func HandleResponseErrors(
 		})
 	}
 
+	responseBody, err = io.ReadAll(httpResp.Body)
 	if err != nil {
 		log.Panic("Error while parsing response error")
 	}
