@@ -488,6 +488,20 @@ func reinstall(d *schema.ResourceData, client *openapi.APIClient, ctx context.Co
 
 func resourceInstanceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
+
+	client := m.(*openapi.APIClient)
+	instanceId := d.Id()
+
+	httpResp, err := client.InstancesApi.
+		CencelInstance(ctx, instanceId).
+		XRequestId(uuid.NewV4().String()).
+		Execute()
+
+	if err != nil {
+		return HandleResponseErrors(diags, httpResp)
+	}
+
+	d.SetId("")
 	return diags
 }
 
