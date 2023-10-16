@@ -490,10 +490,13 @@ func resourceInstanceDelete(ctx context.Context, d *schema.ResourceData, m inter
 	var diags diag.Diagnostics
 
 	client := m.(*openapi.APIClient)
-	instanceId := d.Id()
+	instanceId, err := strconv.ParseInt(d.Id(), 10, 64)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	httpResp, err := client.InstancesApi.
-		CencelInstance(ctx, instanceId).
+	_, httpResp, err := client.InstancesApi.
+		CancelInstance(ctx, instanceId).
 		XRequestId(uuid.NewV4().String()).
 		Execute()
 
