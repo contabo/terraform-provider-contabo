@@ -18,7 +18,7 @@ terraform {
   required_providers {
     contabo = {
       source = "contabo/contabo"
-      version = ">= 0.1.23"
+      version = "__CURRENT_VERSION__"
     }
   }
 }

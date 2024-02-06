@@ -298,7 +298,7 @@ func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m inter
 		createInstanceRequest.Region = &region
 	}
 	if productId != "" {
-		createInstanceRequest.ProductId = productId
+		createInstanceRequest.ProductId = &productId
 	}
 	if sshKeys != nil {
 		var sshKeys64 []int64
