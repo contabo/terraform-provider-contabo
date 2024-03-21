@@ -63,6 +63,28 @@ func MultipleDataObjectsError(
 	})
 }
 
+func NoDataError(
+	diags diag.Diagnostics,
+) diag.Diagnostics {
+	return append(diags, diag.Diagnostic{
+		Severity: diag.Error,
+		Summary:  "API response returned empty data.",
+		Detail:   "The API response returned empty data.",
+	})
+}
+
+func HandleMissingDataObjectsFilters(
+	diags diag.Diagnostics,
+	summary string,
+	details string,
+) diag.Diagnostics {
+	return append(diags, diag.Diagnostic{
+		Severity: diag.Error,
+		Summary:  summary,
+		Detail:   details,
+	})
+}
+
 func HandleDownloadErrors(
 	diags diag.Diagnostics,
 ) diag.Diagnostics {

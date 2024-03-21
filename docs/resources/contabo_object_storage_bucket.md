@@ -10,7 +10,6 @@ description: |-
 
 Manage buckets on your contabo Object Storage. With this resource you are able to manage your buckets the same way your are able to manage them in your contabo customer panel.
 
-
 ## Example Usage
 
 ```terraform
