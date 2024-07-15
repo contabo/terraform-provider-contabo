@@ -33,6 +33,12 @@ func resourceInstance() *schema.Resource {
 				Optional:    true,
 				Description: "The identifier of the existing compute instance. (override id)",
 			},
+			"existing_instance_image_default": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "The uuid identifier of an existing image to rollback on when destroying an existing instance (existing_instance_id). Defaulting to ubuntu but could fail if the image disappears after some times.",
+			},
 			"last_updated": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -493,6 +499,35 @@ func resourceInstanceDelete(ctx context.Context, d *schema.ResourceData, m inter
 	instanceId, err := strconv.ParseInt(d.Id(), 10, 64)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	extstingId := d.Get("existing_instance_id").(string)
+
+	reinstallInstanceRequest := *openapi.NewReinstallInstanceRequestWithDefaults()
+	defaultImageId := d.Get("existing_instance_image_default").(string)
+
+	if defaultImageId == "" {
+		reinstallInstanceRequest.ImageId = "d64d5c6c-9dda-4e38-8174-0ee282474d8a" // Ubuntu 20.04
+	} else {
+		reinstallInstanceRequest.ImageId = defaultImageId
+	}
+
+	if extstingId != "" {
+		res, httpResp, err := client.InstancesApi.
+			ReinstallInstance(ctx, instanceId).
+			XRequestId(uuid.NewV4().String()).
+			ReinstallInstanceRequest(reinstallInstanceRequest).
+			Execute()
+
+		if err != nil {
+			return HandleResponseErrors(diags, httpResp)
+		} else if len(res.Data) != 1 {
+			return MultipleDataObjectsError(diags)
+		}
+
+		d.SetId("")
+
+		return diags
 	}
 
 	_, httpResp, err := client.InstancesApi.
