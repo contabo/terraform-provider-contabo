@@ -507,7 +507,7 @@ func resourceInstanceDelete(ctx context.Context, d *schema.ResourceData, m inter
 	defaultImageId := d.Get("existing_instance_image_default").(string)
 
 	if defaultImageId == "" {
-		reinstallInstanceRequest.ImageId = "d64d5c6c-9dda-4e38-8174-0ee282474d8a" // Ubuntu 20.04
+		reinstallInstanceRequest.ImageId = "d64d5c6c-9dda-4e38-8174-0ee282474d8a" // Ubuntu 24.04
 	} else {
 		reinstallInstanceRequest.ImageId = defaultImageId
 	}
