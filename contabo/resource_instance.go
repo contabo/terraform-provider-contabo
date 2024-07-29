@@ -2,8 +2,10 @@ package contabo
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
+	"strings"
 
 	"contabo.com/openapi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -32,6 +34,12 @@ func resourceInstance() *schema.Resource {
 				Computed:    true,
 				Optional:    true,
 				Description: "The identifier of the existing compute instance. (override id)",
+			},
+			"existing_instance_image_default": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:    "Ubuntu",
+				Description: "The name of an existing image to rollback on when destroying an existing instance (existing_instance_id). Defaulting to ubuntu.",
 			},
 			"last_updated": {
 				Type:        schema.TypeString,
@@ -495,6 +503,18 @@ func resourceInstanceDelete(ctx context.Context, d *schema.ResourceData, m inter
 		return diag.FromErr(err)
 	}
 
+	existingId := d.Get("existing_instance_id").(string)
+
+	if len(strings.TrimSpace(existingId)) > 0 {
+
+		diags = reinstallDefaultOSOnExistingInstance(
+			ctx, m, diags, d.Get("existing_instance_image_default").(string), instanceId)
+
+		d.SetId("")
+
+		return diags
+	}
+
 	_, httpResp, err := client.InstancesApi.
 		CancelInstance(ctx, instanceId).
 		XRequestId(uuid.NewV4().String()).
@@ -506,6 +526,71 @@ func resourceInstanceDelete(ctx context.Context, d *schema.ResourceData, m inter
 
 	d.SetId("")
 	return diags
+}
+
+func reinstallDefaultOSOnExistingInstance(
+	ctx context.Context, 
+	m interface{},
+	diags diag.Diagnostics,
+	defaultImageName string,
+	instanceId int64,
+) diag.Diagnostics {
+	
+	client := m.(*openapi.APIClient)
+
+	reinstallInstanceRequest := *openapi.NewReinstallInstanceRequestWithDefaults()
+
+	image, diags, err := findImageByName(ctx, defaultImageName, m, diags)
+
+	if err != nil {
+		return diags
+	}
+	
+	reinstallInstanceRequest.ImageId = image
+
+	res, httpResp, err := client.InstancesApi.
+		ReinstallInstance(ctx, instanceId).
+		XRequestId(uuid.NewV4().String()).
+		ReinstallInstanceRequest(reinstallInstanceRequest).
+		Execute()
+
+	if err != nil {
+		return HandleResponseErrors(diags, httpResp)
+	} else if len(res.Data) != 1 {
+		return MultipleDataObjectsError(diags)
+	}
+
+	return diags
+}
+
+func findImageByName(ctx context.Context, image string, m interface{}, diags diag.Diagnostics) (string, diag.Diagnostics, error) {
+
+	client := m.(*openapi.APIClient)
+
+	apiRetrieveImageListRequest := client.ImagesApi.RetrieveImageList(ctx).
+		Name(image).
+		XRequestId(uuid.NewV4().String())
+
+	res, httpResp, err := client.ImagesApi.
+		RetrieveImageListExecute(apiRetrieveImageListRequest)
+
+	if err != nil {
+		return "", HandleResponseErrors(diags, httpResp), err
+	}
+
+	if len(res.Data) > 0 {
+		return res.Data[0].ImageId, diags, nil
+	}
+
+	err = errors.New("The image with the name " + image + " was not found.")
+
+	diags = append(diags, diag.Diagnostic{
+		Summary: "Image not found",
+		Severity: diag.Error,
+		Detail: err.Error(),
+	})
+
+	return "", diags, err
 }
 
 func AddInstanceToData(
