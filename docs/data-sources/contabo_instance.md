@@ -43,6 +43,7 @@ output "my_test_instance" {
 
 - `add_ons` (Block List) (see [below for nested schema](#nestedblock--add_ons))
 - `cancel_date` (String) The date on which the instance will be cancelled.
+- `default_user` (String) Default user name created for login during (re-)installation with administrative privileges. Allowed values for Linux/BSD are admin (use sudo to apply administrative privileges like root) or root. Allowed values for Windows are admin (has administrative privileges like administrator) or administrator.See our [api documentation](https://api.contabo.com/#tag/Instances/operation/createInstance) for available default users.
 - `display_name` (String) Image Id is used to set up the compute instance. Ubuntu 20.04 is the default.
 - `image_id` (String) Image Id is used to set up the compute instance. Ubuntu 20.04 is the default.
 - `license` (String) Additional license in order to enhance your chosen product. It is mainly needed for software licenses on your product (not needed for windows). See our [api documentation](https://api.contabo.com/#tag/Instances/operation/createInstance) for all available licenses.

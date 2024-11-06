@@ -222,6 +222,12 @@ func resourceInstance() *schema.Resource {
 				Computed:    true,
 				Description: "Additional license in order to enhance your chosen product. It is mainly needed for software licenses on your product (not needed for windows). See our [api documentation](https://api.contabo.com/#tag/Instances/operation/createInstance) for all available licenses.",
 			},
+			"default_user": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Default user name created for login during (re-)installation with administrative privileges. Allowed values for Linux/BSD are admin (use sudo to apply administrative privileges like root) or root. Allowed values for Windows are admin (has administrative privileges like administrator) or administrator.",
+			},
 			"period": {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -286,6 +292,7 @@ func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m inter
 	rootPassword := d.Get("root_password")
 	userData := d.Get("user_data").(string)
 	license := d.Get("license").(string)
+	defaultUser := d.Get("default_user").(string)
 	period := d.Get("period").(int)
 
 	if displayName != "" {
@@ -320,6 +327,10 @@ func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m inter
 	}
 	if period != 0 {
 		createInstanceRequest.Period = int64(period)
+	}
+
+	if defaultUser != "" {
+		createInstanceRequest.DefaultUser = &defaultUser
 	}
 
 	res, httpResp, err := client.InstancesApi.
@@ -413,6 +424,13 @@ func shouldReinstall(d *schema.ResourceData) bool {
 			reinstallChange = true
 		}
 	}
+	if d.HasChange("default_user") {
+		defaultUser := d.Get("default_user").(string)
+		if defaultUser != "" {
+			reinstallChange = true
+		}
+	}
+
 	return reinstallChange
 }
 
@@ -463,6 +481,13 @@ func reinstall(d *schema.ResourceData, client *openapi.APIClient, ctx context.Co
 		userData := d.Get("user_data").(string)
 		if userData != "" {
 			patchInstanceRequest.UserData = &userData
+		}
+	}
+
+	if d.HasChange("default_user") {
+		defaultUser := d.Get("default_user").(string)
+		if defaultUser != "" {
+			patchInstanceRequest.DefaultUser = &defaultUser
 		}
 	}
 

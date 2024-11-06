@@ -42,6 +42,7 @@ resource "contabo_instance" "database_instance" {
 
 - `add_ons` (Block List) (see [below for nested schema](#nestedblock--add_ons))
 - `cancel_date` (String) The date on which the instance will be cancelled.
+- `default_user` (String) Default user name created for login during (re-)installation with administrative privileges. Allowed values for Linux/BSD are admin (use sudo to apply administrative privileges like root) or root. Allowed values for Windows are admin (has administrative privileges like administrator) or administrator.
 - `display_name` (String) The instance name chosen by the customer that will be shown in the customer panel.
 - `existing_instance_id` (String) The identifier of the existing compute instance. (override id)
 - `image_id` (String) CAUTION: On updating this value your server will be reinstalled! Image Id is used to set up the compute instance. Ubuntu 20.04 is the default, currently you have to get the Id with our [API](https://api.contabo.com/#tag/Images/operation/retrieveImage) or via our [command line](https://github.com/contabo/cntb) tool with this command: `cntb get images`.

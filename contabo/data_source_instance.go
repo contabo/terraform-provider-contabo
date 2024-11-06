@@ -206,6 +206,12 @@ func dataSourceInstance() *schema.Resource {
 				Computed:    true,
 				Description: "Additional license in order to enhance your chosen product. It is mainly needed for software licenses on your product (not needed for windows). See our [api documentation](https://api.contabo.com/#tag/Instances/operation/createInstance) for all available licenses.",
 			},
+			"default_user": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Default user name created for login during (re-)installation with administrative privileges. Allowed values for Linux/BSD are admin (use sudo to apply administrative privileges like root) or root. Allowed values for Windows are admin (has administrative privileges like administrator) or administrator.See our [api documentation](https://api.contabo.com/#tag/Instances/operation/createInstance) for available default users.",
+			},
 			"period": {
 				Type:        schema.TypeInt,
 				Computed:    true,
