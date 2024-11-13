@@ -48,7 +48,8 @@ signs:
       - "${signature}"
       - "--detach-sign"
       - "${artifact}"
-changelog: {}
+changelog:
+  disable: true
 release:
   github:
     owner: contabo
