@@ -455,7 +455,7 @@ func updateInstanceValues(d *schema.ResourceData, client *openapi.APIClient, ctx
 }
 
 func reinstall(d *schema.ResourceData, client *openapi.APIClient, ctx context.Context, instanceId int64, diags diag.Diagnostics, m interface{}) diag.Diagnostics {
-	patchInstanceRequest := openapi.NewReinstallInstanceRequestWithDefaults()
+	patchInstanceRequest := &openapi.ReinstallInstanceRequest{}
 
 	if d.HasChange("ssh_keys") {
 		sshKeys := d.Get("ssh_keys")
