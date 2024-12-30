@@ -456,6 +456,8 @@ func updateInstanceValues(d *schema.ResourceData, client *openapi.APIClient, ctx
 
 func reinstall(d *schema.ResourceData, client *openapi.APIClient, ctx context.Context, instanceId int64, diags diag.Diagnostics, m interface{}) diag.Diagnostics {
 	patchInstanceRequest := openapi.NewReinstallInstanceRequestWithDefaults()
+	// the pathInstanceRequest contains "admin" as default value for DefaulUser which is not desired
+	patchInstanceRequest.DefaultUser = &([]string{"default-value"}[0])
 
 	if d.HasChange("ssh_keys") {
 		sshKeys := d.Get("ssh_keys")
