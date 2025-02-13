@@ -6,10 +6,10 @@ provider "contabo" {
   oauth2_pass          = "[your password]"
 }
 
-# Create a new compute instance (vps/vds) in region EU, with specs of the V75 product. Also it has a contract period of 3 month
+# Create a new compute instance (vps/vds) in region EU, with specs of the V76 product. Also it has a contract period of 3 month
 resource "contabo_instance" "database_instance" {
   display_name  = "database"
-  product_id    = "V75"
+  product_id    = "V76"
   region        = "EU"
   period        = 3 
 }
