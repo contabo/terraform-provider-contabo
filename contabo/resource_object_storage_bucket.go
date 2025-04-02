@@ -208,7 +208,7 @@ func getObjectStorage(diags diag.Diagnostics, client *openapi.APIClient, objectS
 }
 
 func getCredentials(diags diag.Diagnostics, client *openapi.APIClient, objectStorageIdOfBucket string) (diag.Diagnostics, S3Credentials) {
-	retrieveCredentialResponse, httpResp, err := client.UsersApi.
+	retrieveCredentialResponse, httpResp, err := client.UsersObjectStorageCredentialsApi.
 		ListObjectStorageCredentials(context.Background(), userId).
 		XRequestId(uuid.NewV4().String()).
 		ObjectStorageId(objectStorageIdOfBucket).
