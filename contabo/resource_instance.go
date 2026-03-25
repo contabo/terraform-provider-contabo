@@ -181,25 +181,10 @@ func resourceInstance() *schema.Resource {
 				Description: "Identifier of the host system.",
 			},
 			"add_ons": {
-				Type:     schema.TypeList,
-				Computed: true,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Optional:    true,
-							Description: "Id of the Addon. Please refer to list [here](https://contabo.com/en/product-list/?show_ids=true).",
-						},
-						"quantity": {
-							Type:        schema.TypeInt,
-							Computed:    true,
-							Optional:    true,
-							Description: "The number of Addons you wish to aquire.",
-						},
-					},
-				},
+				Type:        schema.TypeSet,
+				Elem:        &schema.Schema{Type: schema.TypeInt},
+				Optional:    true,
+				Description: "List off all add on ids of the instance.",
 			},
 			"error_message": {
 				Type:        schema.TypeString,
@@ -608,7 +593,7 @@ func AddInstanceToData(
 	return diags
 }
 
-func buildIpConfig(ipConfigResponse *openapi.IpConfig) []interface{} {
+func buildIpConfig(ipConfigResponse *openapi.IpConfig2) []interface{} {
 	if ipConfigResponse != nil {
 		ipConfig := make(map[string]interface{})
 
@@ -634,7 +619,6 @@ func buildIpConfig(ipConfigResponse *openapi.IpConfig) []interface{} {
 func buildAddons(addOnResponse []openapi.AddOnResponse) []map[string]interface{} {
 	if addOnResponse != nil {
 		var addOns []map[string]interface{}
-
 		for _, addOn := range addOnResponse {
 			builtAddOn := make(map[string]interface{})
 			builtAddOn["id"] = strconv.FormatInt(addOn.Id, 10)
@@ -642,10 +626,8 @@ func buildAddons(addOnResponse []openapi.AddOnResponse) []map[string]interface{}
 
 			addOns = append(addOns, builtAddOn)
 		}
-
 		return addOns
 	}
-
 	return nil
 }
 

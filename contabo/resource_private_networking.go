@@ -201,7 +201,6 @@ func resourcePrivateNetworkCreate(
 		if err != nil && !strings.Contains(err.Error(), httpConflict) {
 			return HandleResponseErrors(diags, httpResp)
 		}
-
 		httpResp, err = assignInstanceToPrivateNetwork(diags, client, privateNetworkId, instanceId)
 		if err != nil {
 			return HandleResponseErrors(diags, httpResp)
@@ -319,7 +318,7 @@ func resourcePrivateNetworkUpdate(
 	}
 
 	if d.HasChange("instance_ids") {
-		rsltDiag := handleInstanceChanges(diags, d, client, privateNetworkId)
+		rsltDiag := handlePrivateNetworkInstanceChanges(diags, d, client, privateNetworkId)
 		if rsltDiag != nil {
 			return rsltDiag
 		}
@@ -343,7 +342,7 @@ func resourcePrivateNetworkUpdate(
 	return diags
 }
 
-func handleInstanceChanges(diags diag.Diagnostics,
+func handlePrivateNetworkInstanceChanges(diags diag.Diagnostics,
 	d *schema.ResourceData,
 	client *openapi.APIClient,
 	privateNetworkId int64) diag.Diagnostics {

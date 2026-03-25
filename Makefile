@@ -3,7 +3,11 @@ ifndef VERSION
 	VERSION = 'v0.0.1'
 endif
 ifndef OUTPUTLOCATION
-	OUTPUTLOCATION = /local/openapi/
+	ifeq ($(OS),Windows_NT)
+		OUTPUTLOCATION = ./local/openapi/
+	else
+		OUTPUTLOCATION = /local/openapi/
+	endif
 endif
 ifndef OPENAPIURL
 	OPENAPIURL = https://api.contabo.com/api-v1.yaml
