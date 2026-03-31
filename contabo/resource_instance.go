@@ -181,10 +181,26 @@ func resourceInstance() *schema.Resource {
 				Description: "Identifier of the host system.",
 			},
 			"add_ons": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeInt},
-				Optional:    true,
-				Description: "List off all add on ids of the instance.",
+				Type:     schema.TypeList,
+				Computed: true,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Optional:    true,
+							Description: "Id of the Addon. Please refer to list [here](https://contabo.com/en/product-list/?show_ids=true).",
+						},
+						"quantity": {
+							Type:        schema.TypeInt,
+							Computed:    true,
+							Optional:    true,
+							Description: "The number of Addons you wish to aquire.",
+						},
+					},
+				},
+
 			},
 			"error_message": {
 				Type:        schema.TypeString,

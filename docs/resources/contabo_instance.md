@@ -40,7 +40,7 @@ resource "contabo_instance" "database_instance" {
 
 ### Optional
 
-- `add_ons` (Set of Number) List off all add on ids of the instance.
+- `add_ons` (Block List) (see [below for nested schema](#nestedblock--add_ons))
 - `cancel_date` (String) The date on which the instance will be cancelled.
 - `default_user` (String) Default user name created for login during (re-)installation with administrative privileges. Allowed values for Linux/BSD are admin (use sudo to apply administrative privileges like root) or root. Allowed values for Windows are admin (has administrative privileges like administrator) or administrator.
 - `display_name` (String) The instance name chosen by the customer that will be shown in the customer panel.
@@ -71,6 +71,15 @@ resource "contabo_instance" "database_instance" {
 - `ram_mb` (Number) Image ram size in megabyte.
 - `status` (String) Status of the compute instance. The status can be set to `provisioning`, `uninstalled`, `running`, `stopped`, `error`, `installing`, `unknown`, or `installed`.
 - `v_host_id` (Number) Identifier of the host system.
+
+<a id="nestedblock--add_ons"></a>
+### Nested Schema for `add_ons`
+
+Optional:
+
+- `id` (String) Id of the Addon. Please refer to list [here](https://contabo.com/en/product-list/?show_ids=true).
+- `quantity` (Number) The number of Addons you wish to aquire.
+
 
 <a id="nestedatt--additional_ips"></a>
 ### Nested Schema for `additional_ips`
