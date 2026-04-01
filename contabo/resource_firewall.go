@@ -558,9 +558,9 @@ func AddFirewallToData(
 
 	for _, instanceStatus := range firewall.InstanceStatus {
 		newStatus := make(map[string]interface{})
-		newStatus["instanceId"] = instanceStatus.InstanceId
+		newStatus["instance_id"] = instanceStatus.InstanceId
 		newStatus["status"] = instanceStatus.Status
-		newStatus["errorMessage"] = instanceStatus.ErrorMessage
+		newStatus["error_message"] = instanceStatus.ErrorMessage
 
 		instancesStatus = append(instancesStatus, newStatus)
 	}
@@ -587,6 +587,7 @@ func buildFirewallRules(rulesResponse *openapi.Rules) []interface{} {
 			rule["protocol"] = ruleInbound.Protocol
 			rule["dest_ports"] = ruleInbound.DestPorts
 			rule["status"] = ruleInbound.Status
+			rule["action"] = ruleInbound.Action
 
 			var srcCidrs []interface{}
 			srcCidrMap := make(map[string]interface{})
