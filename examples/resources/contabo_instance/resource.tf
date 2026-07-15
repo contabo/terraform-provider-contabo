@@ -9,7 +9,7 @@ provider "contabo" {
 # Create a new compute instance (vps/vds) in region EU, with specs of the V76 product. Also it has a contract period of 3 month
 resource "contabo_instance" "database_instance" {
   display_name  = "database"
-  product_id    = "V92"
+  product_id    = "V153"
   region        = "EU"
   period        = 3 
 }

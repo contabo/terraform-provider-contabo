@@ -9,8 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 )
 
-// Generate the Terraform provider documentation using `tfplugindocs`:
-//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+// Generate the Terraform provider documentation using `tfplugindocs`.
+// --provider-name must match the resource prefix ("contabo_*"); otherwise
+// newer tfplugindocs derives it from the repo dir ("contabo-sdkv2") and fails
+// schema lookup.
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name contabo
 
 func main() {
 	var debug bool
