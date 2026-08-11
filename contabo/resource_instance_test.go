@@ -6,12 +6,28 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	"contabo.com/openapi"
 )
 
 var creationDisplayName = (uuid.New()).String()
 var updatedDisplayName = (uuid.New()).String()
 var anotherUpdatedDisplayName = (uuid.New()).String()
+
+func TestReinstallPreservesConfiguredUserData(t *testing.T) {
+	data := schema.TestResourceDataRaw(t, resourceInstance().Schema, map[string]interface{}{
+		"user_data": "#cloud-config\nwrite_files: []\n",
+	})
+	request := openapi.NewReinstallInstanceRequestWithDefaults()
+
+	applyReinstallUserData(data, request)
+
+	if request.UserData == nil || *request.UserData != "#cloud-config\nwrite_files: []\n" {
+		t.Fatalf("reinstall user data = %v", request.UserData)
+	}
+}
 
 func TestAccContaboInstanceBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
