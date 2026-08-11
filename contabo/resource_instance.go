@@ -200,7 +200,6 @@ func resourceInstance() *schema.Resource {
 						},
 					},
 				},
-
 			},
 			"error_message": {
 				Type:        schema.TypeString,
@@ -478,12 +477,7 @@ func reinstall(d *schema.ResourceData, client *openapi.APIClient, ctx context.Co
 		}
 	}
 
-	if d.HasChange("user_data") {
-		userData := d.Get("user_data").(string)
-		if userData != "" {
-			patchInstanceRequest.UserData = &userData
-		}
-	}
+	applyReinstallUserData(d, patchInstanceRequest)
 
 	if d.HasChange("default_user") {
 		defaultUser := d.Get("default_user").(string)
@@ -510,6 +504,15 @@ func reinstall(d *schema.ResourceData, client *openapi.APIClient, ctx context.Co
 	}
 	d.SetId(strconv.Itoa(int(res.Data[0].InstanceId)))
 	return diags
+}
+
+func applyReinstallUserData(d *schema.ResourceData, request *openapi.ReinstallInstanceRequest) {
+	userData, ok := d.GetOk("user_data")
+	if !ok || userData.(string) == "" {
+		return
+	}
+	value := userData.(string)
+	request.UserData = &value
 }
 
 func resourceInstanceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
