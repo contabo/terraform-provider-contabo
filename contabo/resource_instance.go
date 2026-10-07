@@ -3,6 +3,7 @@ package contabo
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"contabo.com/openapi"
@@ -217,6 +218,12 @@ func resourceInstance() *schema.Resource {
 				Optional:    true,
 				Description: "CAUTION: On updating this value your server will be reinstalled! Cloud-Init Config in order to customize during start of compute instance.",
 			},
+			"private_network_ids": {
+				Type:        schema.TypeSet,
+				Elem:        &schema.Schema{Type: schema.TypeInt},
+				Optional:    true,
+				Description: "Set of private network IDs to attach to this instance. The instance will be automatically provisioned with the necessary virtual network interfaces.",
+			},
 			"license": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -308,16 +315,17 @@ func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m inter
 	if productId != "" {
 		createInstanceRequest.ProductId = &productId
 	}
+	var sshKeys64 []int64
 	if sshKeys != nil {
-		var sshKeys64 []int64
 		for _, key := range sshKeys.([]interface{}) {
 			sshKey := key.(int)
 			sshKeys64 = append(sshKeys64, int64(sshKey))
 		}
 		createInstanceRequest.SshKeys = &sshKeys64
 	}
+	var rootPassword64 int64
 	if rootPassword != nil {
-		rootPassword64 := int64(rootPassword.(int))
+		rootPassword64 = int64(rootPassword.(int))
 		createInstanceRequest.RootPassword = &rootPassword64
 	}
 	if userData != "" {
@@ -346,7 +354,22 @@ func resourceInstanceCreate(ctx context.Context, d *schema.ResourceData, m inter
 		return MultipleDataObjectsError(diags)
 	}
 
-	d.SetId(strconv.Itoa(int(res.Data[0].InstanceId)))
+	instanceId := res.Data[0].InstanceId
+	d.SetId(strconv.Itoa(int(instanceId)))
+
+	if pnIds, ok := d.GetOk("private_network_ids"); ok {
+		pnSet := pnIds.(*schema.Set).List()
+		var ids []int64
+		for _, id := range pnSet {
+			ids = append(ids, int64(id.(int)))
+		}
+		if len(ids) > 0 {
+			pnDiag := syncPrivateNetworksStatus(ctx, diags, client, d, ids, instanceId)
+			if len(pnDiag) > 0 {
+				return pnDiag
+			}
+		}
+	}
 
 	return resourceInstanceRead(ctx, d, m)
 }
@@ -377,6 +400,32 @@ func resourceInstanceUpdate(ctx context.Context, d *schema.ResourceData, m inter
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	if d.HasChange("private_network_ids") {
+		oldVal, newVal := d.GetChange("private_network_ids")
+		oldSet := oldVal.(*schema.Set)
+		newSet := newVal.(*schema.Set)
+
+		// Unassign from removed private networks
+		for _, oldId := range oldSet.List() {
+			if !newSet.Contains(oldId) {
+				_, _ = unassignInstanceToPrivateNetwork(diags, client, int64(oldId.(int)), instanceId)
+			}
+		}
+
+		// Sync desired private networks
+		var ids []int64
+		for _, id := range newSet.List() {
+			ids = append(ids, int64(id.(int)))
+		}
+		if len(ids) > 0 {
+			pnDiag := syncPrivateNetworksStatus(ctx, diags, client, d, ids, instanceId)
+			if len(pnDiag) > 0 {
+				return pnDiag
+			}
+		}
+	}
+
 	if shouldUpdateInstanceValues(d) {
 		updateInstanceValues(d, client, ctx, instanceId, diags, m)
 	}
@@ -456,46 +505,7 @@ func updateInstanceValues(d *schema.ResourceData, client *openapi.APIClient, ctx
 }
 
 func reinstall(d *schema.ResourceData, client *openapi.APIClient, ctx context.Context, instanceId int64, diags diag.Diagnostics, m interface{}) diag.Diagnostics {
-	patchInstanceRequest := openapi.NewReinstallInstanceRequestWithDefaults()
-
-	if d.HasChange("ssh_keys") {
-		sshKeys := d.Get("ssh_keys")
-		if sshKeys != nil {
-			var sshKeys64 []int64
-			for _, key := range sshKeys.([]interface{}) {
-				sshKey := key.(int)
-				sshKeys64 = append(sshKeys64, int64(sshKey))
-			}
-			patchInstanceRequest.SshKeys = &sshKeys64
-		}
-	}
-
-	if d.HasChange("root_password") {
-		rootPassword := d.Get("root_password")
-		if rootPassword != nil {
-			rootPassword64 := int64(rootPassword.(int))
-			patchInstanceRequest.RootPassword = &rootPassword64
-		}
-	}
-
-	if d.HasChange("user_data") {
-		userData := d.Get("user_data").(string)
-		if userData != "" {
-			patchInstanceRequest.UserData = &userData
-		}
-	}
-
-	if d.HasChange("default_user") {
-		defaultUser := d.Get("default_user").(string)
-		if defaultUser != "" {
-			patchInstanceRequest.DefaultUser = &defaultUser
-		}
-	}
-
-	imageId := d.Get("image_id").(string)
-	if imageId != "" {
-		patchInstanceRequest.ImageId = imageId
-	}
+	patchInstanceRequest := buildReinstallRequest(d)
 
 	res, httpResp, err := client.InstancesApi.
 		ReinstallInstance(ctx, instanceId).
@@ -519,6 +529,16 @@ func resourceInstanceDelete(ctx context.Context, d *schema.ResourceData, m inter
 	instanceId, err := strconv.ParseInt(d.Id(), 10, 64)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if pnIds, ok := d.GetOk("private_network_ids"); ok {
+		pnSet := pnIds.(*schema.Set).List()
+		for _, id := range pnSet {
+			privateNetworkId := int64(id.(int))
+			if privateNetworkId != 0 {
+				_, _ = unassignInstanceToPrivateNetwork(diags, client, privateNetworkId, instanceId)
+			}
+		}
 	}
 
 	_, httpResp, err := client.InstancesApi.
@@ -696,3 +716,153 @@ func pollInstanceInstalled(
 
 	return &res.Data[0], nil
 }
+
+func syncPrivateNetworksStatus(
+	ctx context.Context,
+	diags diag.Diagnostics,
+	client *openapi.APIClient,
+	d *schema.ResourceData,
+	privateNetworkIds []int64,
+	instanceId int64,
+) diag.Diagnostics {
+	// 1. Ensure instance is running / ready before checking or modifying private networks
+	_, pollDiag := pollInstanceInstalled(diags, client, ctx, instanceId)
+	if len(pollDiag) > 0 {
+		return pollDiag
+	}
+
+	needsReinstall := false
+	needsRestart := false
+
+	for _, privateNetworkId := range privateNetworkIds {
+		// Fetch current status of the instance in this private network
+		status, err := getInstancePrivateNetworkStatus(ctx, client, privateNetworkId, instanceId)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		// If instance is not in the private network, add addon and assign
+		if status == "not_found" {
+			httpResp, err := retryAddPrivateNetworkAddOnToInstance(diags, client, instanceId, 0)
+			if err != nil && !strings.Contains(err.Error(), httpConflict) {
+				return HandleResponseErrors(diags, httpResp)
+			}
+
+			httpResp, err = assignInstanceToPrivateNetwork(diags, client, privateNetworkId, instanceId)
+			if err != nil {
+				return HandleResponseErrors(diags, httpResp)
+			}
+
+			// Re-fetch status after assigning
+			status, err = getInstancePrivateNetworkStatus(ctx, client, privateNetworkId, instanceId)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+		switch status {
+		case "ok":
+			// already fine
+		case "reinstall":
+			needsReinstall = true
+		case "restart":
+			needsRestart = true
+		case "installing":
+			_, pollDiag = pollInstanceInstalled(diags, client, ctx, instanceId)
+			if len(pollDiag) > 0 {
+				return pollDiag
+			}
+		case "reinstallation failed":
+			return diag.Errorf("Contabo instance %d private network reinstallation failed in network %d", instanceId, privateNetworkId)
+		}
+	}
+
+	// If at least one network requires reinstall, reinstall takes precedence and provisions NICs
+	if needsReinstall {
+		reinstallReq := buildReinstallRequest(d)
+
+		_, httpResp, err := client.InstancesApi.
+			ReinstallInstance(ctx, instanceId).
+			XRequestId(uuid.NewV4().String()).
+			ReinstallInstanceRequest(*reinstallReq).
+			Execute()
+		if err != nil {
+			return HandleResponseErrors(diags, httpResp)
+		}
+
+		// Wait for reinstall to complete
+		_, pollDiag = pollInstanceInstalled(diags, client, ctx, instanceId)
+		if len(pollDiag) > 0 {
+			return pollDiag
+		}
+	} else if needsRestart {
+		_, httpResp, err := client.InstanceActionsApi.
+			Restart(ctx, instanceId).
+			XRequestId(uuid.NewV4().String()).
+			Execute()
+		if err != nil {
+			return HandleResponseErrors(diags, httpResp)
+		}
+
+		_, pollDiag = pollInstanceInstalled(diags, client, ctx, instanceId)
+		if len(pollDiag) > 0 {
+			return pollDiag
+		}
+	}
+
+	return nil
+}
+
+func getInstancePrivateNetworkStatus(
+	ctx context.Context,
+	client *openapi.APIClient,
+	privateNetworkId int64,
+	instanceId int64,
+) (string, error) {
+	pnRes, _, err := client.PrivateNetworksApi.
+		RetrievePrivateNetwork(ctx, privateNetworkId).
+		XRequestId(uuid.NewV4().String()).
+		Execute()
+	if err != nil {
+		return "", err
+	}
+	if len(pnRes.Data) == 0 {
+		return "not_found", nil
+	}
+
+	for _, inst := range pnRes.Data[0].Instances {
+		if inst.InstanceId == instanceId {
+			return inst.Status, nil
+		}
+	}
+	return "not_found", nil
+}
+
+func buildReinstallRequest(d *schema.ResourceData) *openapi.ReinstallInstanceRequest {
+	req := openapi.NewReinstallInstanceRequestWithDefaults()
+
+	if imageId := d.Get("image_id").(string); imageId != "" {
+		req.ImageId = imageId
+	}
+	if userData := d.Get("user_data").(string); userData != "" {
+		req.UserData = &userData
+	}
+	if defaultUser := d.Get("default_user").(string); defaultUser != "" {
+		req.DefaultUser = &defaultUser
+	}
+	if rootPassword, ok := d.GetOk("root_password"); ok {
+		rootPassword64 := int64(rootPassword.(int))
+		req.RootPassword = &rootPassword64
+	}
+	if sshKeys, ok := d.GetOk("ssh_keys"); ok {
+		var sshKeys64 []int64
+		for _, key := range sshKeys.([]interface{}) {
+			sshKeys64 = append(sshKeys64, int64(key.(int)))
+		}
+		req.SshKeys = &sshKeys64
+	}
+
+	return req
+}
+
+
