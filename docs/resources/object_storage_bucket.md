@@ -51,3 +51,12 @@ resource "contabo_object_storage_bucket" "example_bucket" {
 - `creation_date` (String) The creation date of the bucket.
 - `id` (String) The identifier of the Object Storage. Use it to manage it!
 - `public_sharing_link` (String) If your bucket is publicly shared, you can access it with this link.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Object Storage buckets can be imported using the object storage id and the bucket name separated by a slash
+terraform import contabo_object_storage_bucket.example_bucket <object_storage_id>/<bucket_name>
+```

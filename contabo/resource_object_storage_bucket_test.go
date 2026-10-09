@@ -24,6 +24,12 @@ func TestAccObjectStorageBucketBasic(t *testing.T) {
 				PreventPostDestroyRefresh: true,
 				ExpectNonEmptyPlan:        true,
 			},
+			{
+				ResourceName:            "contabo_object_storage_bucket.my-lovely-bucket",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"creation_date"},
+			},
 		},
 	})
 }

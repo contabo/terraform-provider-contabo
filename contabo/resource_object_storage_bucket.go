@@ -2,6 +2,7 @@ package contabo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -41,6 +42,9 @@ func resourceObjectStorageBucket() *schema.Resource {
 		ReadContext:   resourceObjectStorageBucketRead,
 		UpdateContext: resourceObjectStorageBucketUpdate,
 		DeleteContext: resourceObjectStorageBucketDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceObjectStorageBucketImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,
@@ -234,17 +238,31 @@ func resourceObjectStorageBucketRead(
 ) diag.Diagnostics {
 	var diags diag.Diagnostics
 	client := m.(*openapi.APIClient)
-	bucketName := d.Get("name").(string)
-	objectStorageIdOfBucket := d.Get("object_storage_id").(string)
+	bucketName := getBucketNameFromId(d.Id())
+	objectStorageIdOfBucket := getObjectStorageIdFromId(d.Id())
 
 	diags, objectStorage, s3Credentials := getObjectStorageAndCredentials(diags, client, objectStorageIdOfBucket)
+	if diags.HasError() {
+		return diags
+	}
 
 	diags, bucketInfo, err := getBucket(diags, objectStorage, s3Credentials, bucketName)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	isPublicSharing := d.Get("public_sharing").(bool)
-	publicSharingLink := d.Get("public_sharing_link").(string)
+	if bucketInfo.Name == "" {
+		d.SetId("")
+		return diags
+	}
+
+	diags, isPublicSharing, err := isBucketPublicSharing(diags, objectStorage, s3Credentials, bucketName)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	publicSharingLink := ""
+	if isPublicSharing {
+		publicSharingLink = generatePublicSharingUrl(objectStorage, bucketName)
+	}
 
 	bucket := Bucket{
 		bucketName,
@@ -255,6 +273,97 @@ func resourceObjectStorageBucketRead(
 		publicSharingLink,
 	}
 	return AddObjectStorageBucketToData(bucket, d, diags)
+}
+
+func resourceObjectStorageBucketImport(
+	ctx context.Context,
+	d *schema.ResourceData,
+	m interface{},
+) ([]*schema.ResourceData, error) {
+	parts := strings.Split(d.Id(), "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return nil, fmt.Errorf("unexpected format of ID (%s), expected <object_storage_id>/<bucket_name>", d.Id())
+	}
+	return []*schema.ResourceData{d}, nil
+}
+
+func isBucketPublicSharing(
+	diags diag.Diagnostics,
+	objectStorage openapi.ObjectStorageResponse,
+	s3Credentials S3Credentials,
+	bucketName string) (diag.Diagnostics, bool, error) {
+	diags, s3Url := getS3Url(diags, objectStorage)
+
+	minioClient, err := minio.New(s3Url.Host, &minio.Options{
+		Creds: credentials.NewStaticV4(
+			s3Credentials.AccessKey,
+			s3Credentials.SecretKey,
+			"",
+		),
+		Secure: true,
+	})
+	if err != nil {
+		return diags, false, err
+	}
+
+	policy, err := minioClient.GetBucketPolicy(context.Background(), bucketName)
+	if err != nil {
+		return diags, false, err
+	}
+	return diags, isPublicSharingPolicy(policy, bucketName), nil
+}
+
+type bucketPolicyStatement struct {
+	Effect    string
+	Principal interface{}
+	Action    interface{}
+	Resource  interface{}
+}
+
+type bucketPolicy struct {
+	Statement []bucketPolicyStatement
+}
+
+// isPublicSharingPolicy reports whether the bucket policy allows anonymous
+// s3:GetObject on all objects of the bucket, as set by enablePublicSharing.
+func isPublicSharingPolicy(policyJson string, bucketName string) bool {
+	if policyJson == "" {
+		return false
+	}
+	var policy bucketPolicy
+	if err := json.Unmarshal([]byte(policyJson), &policy); err != nil {
+		return false
+	}
+	objectPolicyResourcePath := AWS_S3_STATEMENT_RESOURCE_PREFIX + bucketName + "/*"
+	for _, statement := range policy.Statement {
+		if statement.Effect != "Allow" {
+			continue
+		}
+		principals := statement.Principal
+		if principalMap, ok := principals.(map[string]interface{}); ok {
+			principals = principalMap["AWS"]
+		}
+		if containsPolicyValue(principals, "*") &&
+			containsPolicyValue(statement.Action, "s3:GetObject") &&
+			containsPolicyValue(statement.Resource, objectPolicyResourcePath) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsPolicyValue(values interface{}, value string) bool {
+	switch v := values.(type) {
+	case string:
+		return v == value
+	case []interface{}:
+		for _, item := range v {
+			if s, ok := item.(string); ok && s == value {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func getObjectStorageAndCredentials(
