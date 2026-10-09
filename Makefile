@@ -24,13 +24,17 @@ test-acc:
 .PHONY: build
 build: generate-api-clients build-only
 
+# Operations with multiple tags are generated into each tag's API file, which
+# causes duplicate declarations in the Go client. Keep only the first tag.
 .PHONY: generate-api-clients
 generate-api-clients:
 	rm -rf openapi
 	-docker volume rm -f openapivolume
+	curl -sSfL $(OPENAPIURL) | docker run --rm -i -v $(OPENAPIVOLUME) --user root --entrypoint sh mikefarah/yq:4.44.3 -c \
+	'yq "(.paths[][] | select(tag == \"!!map\" and has(\"tags\")) | .tags) |= .[0:1]" - > /local/openapi-spec.yaml'
 	docker run --rm -v $(OPENAPIVOLUME) --env JAVA_OPTS=$(JAVAOPT) openapitools/openapi-generator-cli:v5.2.1 generate \
 	--skip-validate-spec \
-	--input-spec $(OPENAPIURL) \
+	--input-spec /local/openapi-spec.yaml \
 	--generator-name  go \
 	--output $(OUTPUTLOCATION)
 	docker container create --name generate-openapi-client2 -v openapivolume:/openapi alpine bash
