@@ -68,6 +68,9 @@ func Provider() *schema.Provider {
 			"contabo_object_storage_bucket": resourceObjectStorageBucket(),
 			"contabo_tag":                   resourceTag(),
 			"contabo_tag_assignment":        resourceTagAssignment(),
+			"contabo_dns_zone":              resourceDnsZone(),
+			"contabo_dns_record":            resourceDnsRecord(),
+			"contabo_ptr_record":            resourcePtrRecord(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"contabo_instance":              dataSourceInstance(),
@@ -80,6 +83,8 @@ func Provider() *schema.Provider {
 			"contabo_object_storage_bucket": dataSourceObjectStorageBucket(),
 			"contabo_tag":                   dataSourceTag(),
 			"contabo_tag_assignment":        dataSourceTagAssignment(),
+			"contabo_dns_zone":              dataSourceDnsZone(),
+			"contabo_ptr_record":            dataSourcePtrRecord(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
