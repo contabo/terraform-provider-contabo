@@ -2,132 +2,65 @@ package contabo
 
 import (
 	"context"
+	"net/url"
 
 	"contabo.com/openapi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	uuid "github.com/satori/go.uuid"
 )
 
 func dataSourceFirewall() *schema.Resource {
 	return &schema.Resource{
+		Description: "This data source reads one firewall by the id or by the name of the firewall.",
 		ReadContext: dataSourceFirewallRead,
 		Schema: map[string]*schema.Schema{
-			"created_date": &schema.Schema{
+			"id": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The id of the firewall. Set either `id` or `name`.",
+			},
+			"name": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The name of the firewall. Set either `id` or `name`. Exactly one firewall must have this name.",
+			},
+			"created_date": {
 				Type:        schema.TypeString,
-				Optional:    true,
 				Computed:    true,
-				Description: "The creation date of the Firewall.",
+				Description: "The date when the firewall was created.",
 			},
-			"id": &schema.Schema{
+			"description": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The identifier of the Firewall. Use it to manage it!",
+				Description: "The description of the firewall.",
 			},
-			"name": &schema.Schema{
+			"status": {
 				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The name of the Firewall. It may contain letters, numbers, colons, dashes, and underscores. There is a limit of 255 characters per Firewall name.",
-			},
-			"description": &schema.Schema{
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The description of the Firewall. There is a limit of 255 characters per Firewall.",
-			},
-			"status": &schema.Schema{
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Status of the Firewall. It can be `active`, or `inactive`.",
+				Computed:    true,
+				Description: "The status of the firewall. The value is `active` or `inactive`.",
 			},
 			"instance_ids": {
 				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeInt},
-				Optional:    true,
-				Description: "Add the instace Ids to the firewall here. If you do not add any instance Ids an empty firewall will be created.",
+				Computed:    true,
+				Description: "The ids of the instances that the firewall protects.",
 			},
-			"instances_status": {
+			"instances_status": firewallInstancesStatusSchema(),
+			"rules": {
 				Type:        schema.TypeList,
 				Computed:    true,
-				Optional:    true,
-				Description: "The status of every instance in the firewall",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"instance_id": {
-							Type:        schema.TypeInt,
-							Computed:    true,
-							Description: "The instance",
-						},
-						"status": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "Status of the instance.",
-						},
-						"error_message": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Optional:    true,
-							Description: "Status of the instance.",
-						},
-					},
-				},
-			},
-			"rules": {
-				Type:     schema.TypeList,
-				Computed: true,
-				Optional: true,
+				Description: "The rules of the firewall.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"inbound": {
 							Type:        schema.TypeList,
 							Computed:    true,
-							Optional:    true,
-							Description: "Inbound rules for this Firewall",
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"protocol": {
-										Type:        schema.TypeString,
-										Computed:    true,
-										Optional:    true,
-										Description: "Define the protocol for the rule. Allowed protocols are `tcp`, `udp` and `icmp`.",
-									},
-									"action": {
-										Type:        schema.TypeString,
-										Computed:    true,
-										Optional:    true,
-										Description: "Action of the rule, currently there is just `accept`.",
-									},
-									"status": {
-										Type:        schema.TypeString,
-										Optional:    true,
-										Description: "Status of the rule. It can be `active`, or `inactive`.",
-									},
-									"dest_ports": {
-										Type:     schema.TypeSet,
-										Optional: true,
-										Elem:     &schema.Schema{Type: schema.TypeString},
-									},
-									"src_cidr": {
-										Type:     schema.TypeList,
-										Optional: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"ipv4": &schema.Schema{
-													Type:        schema.TypeSet,
-													Elem:        &schema.Schema{Type: schema.TypeString},
-													Optional:    true,
-													Description: "Provide allowed IPv4 addresses as string array for this rule",
-												},
-												"ipv6": &schema.Schema{
-													Type:        schema.TypeSet,
-													Elem:        &schema.Schema{Type: schema.TypeString},
-													Optional:    true,
-													Description: "Provide allowed IPv6 addresses as string array for this rule",
-												},
-											},
-										},
-									},
-								},
-							},
+							Description: "The inbound rules of the firewall.",
+							Elem:        firewallRuleSchema(true),
 						},
 					},
 				},
@@ -137,24 +70,33 @@ func dataSourceFirewall() *schema.Resource {
 }
 
 func dataSourceFirewallRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
 	client := m.(*openapi.APIClient)
 
-	firewallId := d.Get("id").(string)
-
-	res, httpResp, err := client.FirewallsApi.
-		RetrieveFirewall(ctx, firewallId).
-		XRequestId(uuid.NewV4().String()).
-		Execute()
-
-	if err != nil {
-		return HandleResponseErrors(diags, httpResp)
-	} else if len(res.Data) != 1 {
-		return MultipleDataObjectsError(diags)
+	if firewallId := d.Get("id").(string); firewallId != "" {
+		firewall, httpResp, err := retrieveFirewall(ctx, client, firewallId)
+		if err != nil {
+			return apiErrorDiags(httpResp, err)
+		}
+		return setFirewallData(*firewall, d)
 	}
 
-	d.SetId(res.Data[0].FirewallId)
-
-	resultDiags, _ := AddFirewallToData(res.Data[0], d, diags)
-	return resultDiags
+	name := d.Get("name").(string)
+	firewalls, httpResp, err := listFirewalls(ctx, client, url.Values{"name": []string{name}})
+	if err != nil {
+		return apiErrorDiags(httpResp, err)
+	}
+	var matches []firewallResponse
+	for _, firewall := range firewalls {
+		if firewall.Name == name {
+			matches = append(matches, firewall)
+		}
+	}
+	switch len(matches) {
+	case 0:
+		return diag.Errorf("no firewall named %q", name)
+	case 1:
+		return setFirewallData(matches[0], d)
+	default:
+		return diag.Errorf("%d firewalls are named %q; look the firewall up by id", len(matches), name)
+	}
 }
