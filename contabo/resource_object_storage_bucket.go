@@ -201,13 +201,14 @@ func getObjectStorage(diags diag.Diagnostics, client *openapi.APIClient, objectS
 		return HandleResponseErrors(diags, httpResp), openapi.ObjectStorageResponse{}
 	}
 	if len(objectStorageRetrieveResponse.Data) == 0 {
-		return diag.FromErr(errors.New("No Object Storage could be found with id : " + objectStorageId)), objectStorageRetrieveResponse.Data[0]
+		return diag.FromErr(errors.New("No Object Storage could be found with id : " + objectStorageId)), openapi.ObjectStorageResponse{}
 
 	}
 	return diags, objectStorageRetrieveResponse.Data[0]
 }
 
 func getCredentials(diags diag.Diagnostics, client *openapi.APIClient, objectStorageIdOfBucket string) (diag.Diagnostics, S3Credentials) {
+	userId := providerUserId(client)
 	retrieveCredentialResponse, httpResp, err := client.UsersObjectStorageCredentialsApi.
 		ListObjectStorageCredentials(context.Background(), userId).
 		XRequestId(uuid.NewV4().String()).
@@ -461,7 +462,6 @@ func generateBucketId(objectStorageId string, bucketName string) string {
 	return objectStorageId + "/" + bucketName
 }
 
-
 func getBucketNameFromId(bucketId string) string {
 	bucketName := strings.Split(bucketId, "/")
 	return bucketName[1]
@@ -473,14 +473,14 @@ func getObjectStorageIdFromId(bucketId string) string {
 }
 
 func checkIfBucketNameChanged(diags diag.Diagnostics, bucketName string, fileResourceBucketName string) diag.Diagnostics {
-	if(bucketName != fileResourceBucketName) {
+	if bucketName != fileResourceBucketName {
 		return diag.FromErr(errors.New("it is not possible to update the bucket name, please create instead a new bucket"))
 	}
 	return diags
 }
 
 func checkIfObjectStorageIdChanged(diags diag.Diagnostics, bucketName string, fileResourceBucketName string) diag.Diagnostics {
-	if(bucketName != fileResourceBucketName) {
+	if bucketName != fileResourceBucketName {
 		return diag.FromErr(errors.New("it is not possible to update the object storage id"))
 	}
 	return diags

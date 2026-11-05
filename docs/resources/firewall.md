@@ -3,60 +3,51 @@
 page_title: "contabo_firewall Resource - contabo"
 subcategory: ""
 description: |-
-  
+  This resource manages a firewall and the instances that the firewall protects. Firewalls are free, and a firewall works on every instance. The API adds a rule to the end of every firewall that blocks all other inbound traffic. The provider does not show that rule.
 ---
 
 # contabo_firewall (Resource)
 
-
+This resource manages a firewall and the instances that the firewall protects. Firewalls are free, and a firewall works on every instance. The API adds a rule to the end of every firewall that blocks all other inbound traffic. The provider does not show that rule.
 
 ## Example Usage
 
 ```terraform
-# Configure your Contabo API credentials
-provider "contabo" {
-  oauth2_client_id = "[your client id]"
-  oauth2_client_secret = "[your client secret]"
-  oauth2_user = "[your username]"
-  oauth2_pass = "[your password]"
-}
+# Allow SSH and HTTPS from everywhere and everything from the private
+# network; the API drops all other inbound traffic.
+resource "contabo_firewall" "web" {
+  name         = "web"
+  description  = "web servers"
+  status       = "active"
+  instance_ids = [contabo_instance.web.id]
 
-# Create a default firewall
-resource "contabo_firewall" "default" {
-name        = "default"
-description	= "default firewall"
-status 		  = "active"
-rules {
-	inbound {
-		protocol   = "tcp"
-		action     = "accept"
-		status     = "active"
-		dest_ports = ["22", "80", "443"]
-		src_cidr {
-				ipv4 = ["194.165.134.20", "194.165.134.21"]
-				ipv6 = ["2001:0db8:85a3:0000:0000:8a2e:0370:7334"]
-			}
-		}
-	}
-}
-
-# Update a the default firewall
-resource "contabo_firewall" "default" {
-name        = "default"
-description	= "default firewall"
-status 		  = "active"
-rules {
-	inbound {
-		protocol   = "tcp"
-		action     = "accept"
-		status     = "active"
-		dest_ports = ["22", "80", "443", "25"]
-		src_cidr {
-				ipv4   = ["194.165.134.20", "194.165.134.21", "194.165.134.22", "194.165.134.23"]
-				ipv6   = ["2001:0db8:85a3:0000:0000:8a2e:0370:7334"]
-			}
-		}
-	}
+  rules {
+    inbound {
+      display_name = "ssh"
+      protocol     = "tcp"
+      dest_ports   = ["22"]
+      src_cidr {
+        ipv4 = ["0.0.0.0/0"]
+        ipv6 = ["::/0"]
+      }
+    }
+    inbound {
+      display_name = "https"
+      protocol     = "tcp"
+      dest_ports   = ["443"]
+      src_cidr {
+        ipv4 = ["0.0.0.0/0"]
+        ipv6 = ["::/0"]
+      }
+    }
+    inbound {
+      display_name = "private network"
+      protocol     = "any"
+      src_cidr {
+        ipv4 = ["10.0.0.0/8"]
+      }
+    }
+  }
 }
 ```
 
@@ -72,49 +63,70 @@ rules {
 
 - `created_date` (String) The creation date of the Firewall.
 - `description` (String) The description of the Firewall. There is a limit of 255 characters per Firewall.
-- `instance_ids` (Set of Number) Add the instace Ids to the firewall here. If you do not add any instance Ids an empty firewall will be created.
-- `instances_status` (Block List) The status of every instance in the firewall (see [below for nested schema](#nestedblock--instances_status))
-- `rules` (Block List) (see [below for nested schema](#nestedblock--rules))
+- `instance_ids` (Set of Number) The ids of the instances that the firewall protects. Leave the list empty for a firewall without instances. Before the provider adds an instance to the firewall, the provider waits until the instance is running.
+- `rules` (Block List, Max: 1) The rules of the firewall. (see [below for nested schema](#nestedblock--rules))
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
 - `id` (String) The identifier of the Firewall. Use it to manage it!
-
-<a id="nestedblock--instances_status"></a>
-### Nested Schema for `instances_status`
-
-Optional:
-
-- `error_message` (String) Status of the instance.
-
-Read-Only:
-
-- `instance_id` (Number) The instance
-- `status` (String) Status of the instance.
-
+- `instances_status` (List of Object) The status of the firewall on every instance that the firewall protects. (see [below for nested schema](#nestedatt--instances_status))
 
 <a id="nestedblock--rules"></a>
 ### Nested Schema for `rules`
 
 Optional:
 
-- `inbound` (Block List) Inbound rules for this Firewall (see [below for nested schema](#nestedblock--rules--inbound))
+- `inbound` (Block List) The inbound rules of the firewall. The firewall drops all inbound traffic that no active rule accepts. (see [below for nested schema](#nestedblock--rules--inbound))
 
 <a id="nestedblock--rules--inbound"></a>
 ### Nested Schema for `rules.inbound`
 
 Optional:
 
-- `action` (String) Action of the rule, currently there is just `accept`.
-- `dest_ports` (Set of String)
-- `protocol` (String) Define the protocol for the rule. Allowed protocols are `tcp`, `udp` and `icmp`.
-- `src_cidr` (Block List) (see [below for nested schema](#nestedblock--rules--inbound--src_cidr))
-- `status` (String) Status of the rule. It can be `active`, or `inactive`.
+- `action` (String) The action of the rule, for example `accept` or `drop`. The default value is `accept`.
+- `dest_ports` (Set of String) The destination ports or port ranges of the rule, for example `22` or `8000-8080`. When the list is empty, the rule applies to every port.
+- `display_name` (String) The name of the rule. The Customer Control Panel shows this name.
+- `protocol` (String) The protocol of the rule. The value is `tcp`, `udp`, `icmp`, or `any` for every protocol.
+- `src_cidr` (Block List) The source addresses that the rule applies to. (see [below for nested schema](#nestedblock--rules--inbound--src_cidr))
+- `status` (String) The status of the rule. The value is `active` or `inactive`. The default value is `active`.
 
 <a id="nestedblock--rules--inbound--src_cidr"></a>
 ### Nested Schema for `rules.inbound.src_cidr`
 
 Optional:
 
-- `ipv4` (Set of String) Provide allowed IPv4 addresses as string array for this rule
-- `ipv6` (Set of String) Provide allowed IPv6 addresses as string array for this rule
+- `ipv4` (Set of String) The IPv4 addresses or CIDR ranges, for example `0.0.0.0/0`.
+- `ipv6` (Set of String) The IPv6 addresses or CIDR ranges, for example `::/0`.
+
+
+
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String)
+- `update` (String)
+
+
+<a id="nestedatt--instances_status"></a>
+### Nested Schema for `instances_status`
+
+Read-Only:
+
+- `error_message` (String)
+- `instance_id` (Number)
+- `status` (String)
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Firewalls are imported by their id.
+terraform import contabo_firewall.web 60f08f93-9732-42b3-be42-26167d9ecae7
+```
