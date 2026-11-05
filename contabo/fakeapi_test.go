@@ -438,6 +438,39 @@ func (f *fakeAPI) routes() {
 		}
 		writeData(w, http.StatusCreated, map[string]interface{}{"instanceId": id, "action": r.PathValue("action")})
 	})
+	m.HandleFunc("GET /v1/compute/instances/{id}/vnc", func(w http.ResponseWriter, r *http.Request) {
+		id := pathInt(r, "id")
+		f.mu.Lock()
+		vnc, ok := f.vnc[id]
+		if !ok {
+			vnc = map[string]interface{}{"tenantId": "INT", "customerId": "12345", "instanceId": id, "enabled": true, "vncIp": "198.51.100.7", "vncPort": 63031}
+			f.vnc[id] = vnc
+		}
+		vnc = copyMap(vnc)
+		f.mu.Unlock()
+		writeData(w, http.StatusOK, vnc)
+	})
+	m.HandleFunc("PATCH /v1/compute/instances/{id}/vnc", func(w http.ResponseWriter, r *http.Request) {
+		id := pathInt(r, "id")
+		body := readBody(r)
+		f.mu.Lock()
+		vnc, ok := f.vnc[id]
+		if !ok {
+			vnc = map[string]interface{}{"tenantId": "INT", "customerId": "12345", "instanceId": id, "enabled": true, "vncIp": "198.51.100.7", "vncPort": 63031}
+			f.vnc[id] = vnc
+		}
+		password, _ := body["vncPassword"].(string)
+		if !vncPasswordPattern.MatchString(password) {
+			f.mu.Unlock()
+			// Like the real API: the password is mandatory, and "enabled" is ignored.
+			writeJSON(w, http.StatusBadRequest, map[string]interface{}{"statusCode": 400, "message": []string{"vncPassword must be longer than or equal to 8 characters"}})
+			return
+		}
+		vnc["_password"] = password
+		vnc = copyMap(vnc)
+		f.mu.Unlock()
+		writeData(w, http.StatusOK, vnc)
+	})
 	m.HandleFunc("GET /v1/compute/images/stats", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		stats := copyMap(f.imageStats)
@@ -446,6 +479,8 @@ func (f *fakeAPI) routes() {
 	})
 
 	f.firewallRoutes()
+	f.vipRoutes()
+	f.userRoutes()
 
 	m.HandleFunc("GET /v1/tags/{tagId}/assignments", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
