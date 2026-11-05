@@ -81,6 +81,7 @@ func Provider() *schema.Provider {
 			"contabo_tag_assignment":        dataSourceTagAssignment(),
 			"contabo_dns_zone":              dataSourceDnsZone(),
 			"contabo_ptr_record":            dataSourcePtrRecord(),
+			"contabo_instances":             dataSourceInstances(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}

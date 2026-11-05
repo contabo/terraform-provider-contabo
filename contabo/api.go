@@ -201,3 +201,20 @@ func stringSetToSlice(set *schema.Set) []string {
 	return out
 }
 
+func jsonUnmarshal(body []byte, out interface{}) error {
+	return json.Unmarshal(body, out)
+}
+
+// hashStrings returns a stable hash, used for data source ids.
+func hashStrings(values []string) uint64 {
+	var hash uint64 = 14695981039346656037
+	for _, value := range values {
+		for i := 0; i < len(value); i++ {
+			hash ^= uint64(value[i])
+			hash *= 1099511628211
+		}
+		hash ^= 0xff
+		hash *= 1099511628211
+	}
+	return hash
+}

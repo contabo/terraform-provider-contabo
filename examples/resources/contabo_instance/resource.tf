@@ -1,20 +1,24 @@
-# Configure your Contabo API credentials
-provider "contabo" {
-  oauth2_client_id     = "[your client id]"
-  oauth2_client_secret = "[your client secret]"
-  oauth2_user          = "[your username]"
-  oauth2_pass          = "[your password]"
+# Order a Cloud VPS in the EU region with a 3 month contract, private
+# networking and cloud-init.
+resource "contabo_instance" "database" {
+  display_name = "database"
+  product_id   = "V153"
+  region       = "EU"
+  period       = 3
+  image_id     = data.contabo_image.ubuntu.id
+  default_user = "root"
+  ssh_keys     = [contabo_secret.ssh_key.id]
+  user_data    = file("${path.module}/cloud-init.yaml")
+
+  add_ons {
+    id = "1477" # private networking
+  }
 }
 
-# Create a new compute instance (vps/vds) in region EU, with specs of the V76 product. Also it has a contract period of 3 month
-resource "contabo_instance" "database_instance" {
-  display_name  = "database"
-  product_id    = "V153"
-  region        = "EU"
-  period        = 3 
-}
-
-# Update custom image on instance
-resource "contabo_instance" "database_instance" {
-  image_id = contabo_image.custom_image_alpine.id
+# Manage an instance that was ordered in the customer control panel without
+# reinstalling it, and keep it when the resource is destroyed.
+resource "contabo_instance" "existing" {
+  existing_instance_id = "203235629"
+  display_name         = "legacy"
+  cancel_on_destroy    = false
 }
