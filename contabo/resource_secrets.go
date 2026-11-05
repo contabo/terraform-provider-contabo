@@ -116,7 +116,10 @@ func resourceSecretRead(
 		Execute()
 
 	if err != nil {
-		return HandleResponseErrors(diags, httpResp)
+		if removeFromStateIfNotFound(d, httpResp) {
+			return nil
+		}
+		return apiErrorDiags(httpResp, err)
 	}
 
 	if len(res.Data) != 1 {

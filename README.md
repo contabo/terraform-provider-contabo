@@ -54,3 +54,9 @@ make test-acc
 ```
 
 **CAUTION**: running acceptance testing will work with actual resources which will usually cost money
+
+The DNS and reverse DNS acceptance tests are skipped unless the following environment variables are set:
+
+* `CNTB_TEST_DNS_ZONE`: a domain that is not yet hosted on the Contabo name servers. The zone is created and deleted by the test.
+* `CNTB_TEST_PTR_IPV6`: an unused IPv6 address of one of your instances, e.g. `<instance /64 prefix>::100`. A PTR record is created and deleted for it.
+* `CNTB_TEST_PTR_IPV4`: an IPv4 address of one of your instances. Its PTR record is changed during the test and restored afterwards.

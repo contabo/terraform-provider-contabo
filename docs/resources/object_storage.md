@@ -24,7 +24,7 @@ provider "contabo" {
 # Create a new object storage in region EU
 resource "contabo_object_storage" "object_storage_eu" {
   region                   = "EU"
-	total_purchased_space_tb = 2
+  total_purchased_space_tb = 2
 }
 
 # Update a new object storage, enable autoscaling
@@ -41,12 +41,12 @@ resource "contabo_object_storage" "object_storage_eu" {
 
 ### Required
 
-- `region` (String) Region where the Object Storage should be located. Default region is the EU. Following regions are available: `EU`,`US-central`, `SIN`.
+- `region` (String) Region where the Object Storage should be located, for example `EU`, `US-central` or `SIN`. The API reports the region name (`European Union`); both forms are accepted. Cannot be changed after creation.
 - `total_purchased_space_tb` (Number) Amount of purchased / requested object storage in terabyte.
 
 ### Optional
 
-- `auto_scaling` (Block List) (see [below for nested schema](#nestedblock--auto_scaling))
+- `auto_scaling` (Block List, Max: 1) (see [below for nested schema](#nestedblock--auto_scaling))
 - `display_name` (String) Display name for object storage.
 
 ### Read-Only
@@ -69,3 +69,14 @@ Optional:
 - `error_message` (String) If the autoscaling is in an error state (see status property), the error message can be seen in this field.
 - `size_limit_tb` (Number) Autoscaling size limit for the current object storage.
 - `state` (String) Status of this object storage.  It can be set to `enabled`, `disabled` or `error`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Object storages are imported by their id.
+terraform import contabo_object_storage.eu 74ff44a7-c615-423c-a770-d790236573c2
+```

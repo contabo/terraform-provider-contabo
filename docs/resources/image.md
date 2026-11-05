@@ -47,6 +47,10 @@ resource "contabo_image" "custom_image_alpine" {
 - `os_type` (String) Provided type of operating system (OS). Please specify Windows for MS `Windows` and `Linux` for other OS. Specifying wrong OS type may lead to disfunctional cloud instance.
 - `version` (String) Version number to distinguish the contents of an image e.g. the version of the operating system.
 
+### Optional
+
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+
 ### Read-Only
 
 - `creation_date` (String) The creation date of the image.
@@ -57,3 +61,10 @@ resource "contabo_image" "custom_image_alpine" {
 - `standard_image` (Boolean) Flag indicating that the image is either a standard (true) or a custom image (false).
 - `status` (String) Downloading status of the image (`downloading`, `downloaded` or `error`).
 - `uploaded_size_mb` (Number) The size of the uploaded image in megabyte.
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String)

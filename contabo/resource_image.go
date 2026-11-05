@@ -2,6 +2,7 @@ package contabo
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"contabo.com/openapi"
@@ -12,7 +13,7 @@ import (
 
 const (
 	DOWNLOADING string = "downloading"
-	ERROR string = "error"
+	ERROR       string = "error"
 )
 
 func resourceImage() *schema.Resource {
@@ -22,8 +23,11 @@ func resourceImage() *schema.Resource {
 		ReadContext:   resourceImageRead,
 		UpdateContext: resourceImageUpdate,
 		DeleteContext: resourceImageDelete,
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(60 * time.Minute),
+		},
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -139,6 +143,10 @@ func resourceImageCreate(ctx context.Context, d *schema.ResourceData, m interfac
 
 	d.SetId(res.Data[0].ImageId)
 
+	if diags := pollImageDownloaded(ctx, client, res.Data[0].ImageId, d.Timeout(schema.TimeoutCreate)); diags.HasError() {
+		return diags
+	}
+
 	return resourceImageRead(ctx, d, m)
 }
 
@@ -146,22 +154,15 @@ func resourceImageRead(ctx context.Context, d *schema.ResourceData, m interface{
 	var diags diag.Diagnostics
 	client := m.(*openapi.APIClient)
 
-	imageId := d.Id()
-
 	res, httpResp, err := client.ImagesApi.
-		RetrieveImage(ctx, imageId).
+		RetrieveImage(ctx, d.Id()).
 		XRequestId(uuid.NewV4().String()).
 		Execute()
-
-	image, diag := pollImageDownloaded(diags, client, ctx, imageId)
-
-	if err != nil || image == nil {
-		diags = append(diags, diag...)
-		return AddImageToData(res.Data[0], d, diags)
-	}
-
 	if err != nil {
-		return HandleResponseErrors(diags, httpResp)
+		if removeFromStateIfNotFound(d, httpResp) {
+			return nil
+		}
+		return apiErrorDiags(httpResp, err)
 	} else if len(res.Data) != 1 {
 		return MultipleDataObjectsError(diags)
 	}
@@ -272,34 +273,41 @@ func AddImageToData(
 	return diags
 }
 
+// pollImageDownloaded waits until the image has been downloaded from its URL.
 func pollImageDownloaded(
-	diags diag.Diagnostics,
-	client *openapi.APIClient,
 	ctx context.Context,
+	client *openapi.APIClient,
 	imageId string,
-) (*openapi.ImageResponse, diag.Diagnostics) {
-	res, httpResp, err := client.ImagesApi.
-		RetrieveImage(ctx, imageId).
-		XRequestId(uuid.NewV4().String()).
-		Execute()
-
+	timeout time.Duration,
+) diag.Diagnostics {
+	var diags diag.Diagnostics
+	err := waitFor(ctx, timeout, pollInterval, func() (bool, error) {
+		res, httpResp, err := client.ImagesApi.
+			RetrieveImage(ctx, imageId).
+			XRequestId(uuid.NewV4().String()).
+			Execute()
+		if err != nil {
+			diags = apiErrorDiags(httpResp, err)
+			return false, err
+		}
+		if len(res.Data) != 1 {
+			diags = MultipleDataObjectsError(nil)
+			return false, fmt.Errorf("unexpected response")
+		}
+		switch res.Data[0].Status {
+		case ERROR:
+			diags = diag.Errorf("downloading image %s failed: %s. Check that the URL is reachable and points to a .qcow2 or .iso file", imageId, res.Data[0].ErrorMessage)
+			return false, fmt.Errorf("download failed")
+		case DOWNLOADING:
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
-		return nil, HandleResponseErrors(diags, httpResp)
-	} else if len(res.Data) != 1 {
-		return nil, MultipleDataObjectsError(diags)
+		if diags.HasError() {
+			return diags
+		}
+		return diag.Errorf("waiting for image %s to download: %s", imageId, err)
 	}
-
-	status := res.Data[0].Status
-
-	if status == ERROR {
-		return nil, HandleDownloadErrors(diags)
-	}
-
-	if status == DOWNLOADING {
-		time.Sleep(time.Second)
-		return pollImageDownloaded(diags, client, ctx, imageId)
-	}
-
-	return &res.Data[0], nil
+	return nil
 }
-

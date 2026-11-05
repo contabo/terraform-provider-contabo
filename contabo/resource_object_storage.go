@@ -22,6 +22,16 @@ func resourceObjectStorage() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: func(ctx context.Context, d *schema.ResourceDiff, m interface{}) error {
+			if d.Id() == "" || !d.HasChange("region") {
+				return nil
+			}
+			oldRegion, newRegion := d.GetChange("region")
+			if oldRegion.(string) != "" && normalizeRegion(oldRegion.(string)) != normalizeRegion(newRegion.(string)) {
+				return fmt.Errorf("region cannot be changed from %q to %q: the API cannot move an object storage, and replacing it would cancel it", oldRegion, newRegion)
+			}
+			return nil
+		},
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,
@@ -56,6 +66,8 @@ func resourceObjectStorage() *schema.Resource {
 			"auto_scaling": {
 				Type:     schema.TypeList,
 				Optional: true,
+				Computed: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"state": {
@@ -92,9 +104,10 @@ func resourceObjectStorage() *schema.Resource {
 				Description: "Data center the object storage is located in.",
 			},
 			"region": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Region where the Object Storage should be located. Default region is the EU. Following regions are available: `EU`,`US-central`, `SIN`.",
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: suppressEquivalentRegion,
+				Description:      "Region where the Object Storage should be located, for example `EU`, `US-central` or `SIN`. The API reports the region name (`European Union`); both forms are accepted. Cannot be changed after creation.",
 			},
 			"total_purchased_space_tb": {
 				Type:        schema.TypeFloat,
@@ -188,7 +201,10 @@ func resourceObjectStorageRead(
 		XRequestId(uuid.NewV4().String()).
 		Execute()
 	if err != nil {
-		return HandleResponseErrors(diags, httpResp)
+		if removeFromStateIfNotFound(data, httpResp) {
+			return nil
+		}
+		return apiErrorDiags(httpResp, err)
 	}
 
 	if len(res.Data) != 1 {
@@ -298,8 +314,8 @@ func resourceObjectStorageCancel(
 		CancelObjectStorage(ctx, objectStorageId).
 		XRequestId(uuid.NewV4().String()).
 		Execute()
-	if err != nil {
-		return HandleResponseErrors(diags, httpResp)
+	if err != nil && !isNotFound(httpResp) {
+		return apiErrorDiags(httpResp, err)
 	}
 
 	data.SetId("")
