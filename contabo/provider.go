@@ -2,20 +2,16 @@ package contabo
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
-	"net/http"
 	"net/url"
+	"sort"
 	"strings"
+	"sync"
 
+	"contabo.com/openapi"
 	"contabo.com/terraform-provider-contabo/client"
-	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
-
-var userId string
 
 func Provider() *schema.Provider {
 	return &schema.Provider{
@@ -68,18 +64,38 @@ func Provider() *schema.Provider {
 			"contabo_object_storage_bucket": resourceObjectStorageBucket(),
 			"contabo_tag":                   resourceTag(),
 			"contabo_tag_assignment":        resourceTagAssignment(),
+			"contabo_dns_zone":              resourceDnsZone(),
+			"contabo_dns_record":            resourceDnsRecord(),
+			"contabo_ptr_record":            resourcePtrRecord(),
+			"contabo_instance_reinstall":    resourceInstanceReinstall(),
+			"contabo_instance_vnc":          resourceInstanceVnc(),
+			"contabo_vip_assignment":        resourceVipAssignment(),
+			"contabo_role":                  resourceRole(),
+			"contabo_user":                  resourceUser(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"contabo_instance":              dataSourceInstance(),
-			"contabo_instance_snapshot":     dataSourceSnapshot(),
-			"contabo_image":                 dataSourceImage(),
-			"contabo_object_storage":        dataSourceObjectStorage(),
-			"contabo_secret":                dataSourceSecret(),
-			"contabo_firewall":          	 dataSourceFirewall(),
-			"contabo_private_network":       dataSourcePrivateNetwork(),
-			"contabo_object_storage_bucket": dataSourceObjectStorageBucket(),
-			"contabo_tag":                   dataSourceTag(),
-			"contabo_tag_assignment":        dataSourceTagAssignment(),
+			"contabo_instance":                    dataSourceInstance(),
+			"contabo_instance_snapshot":           dataSourceSnapshot(),
+			"contabo_image":                       dataSourceImage(),
+			"contabo_object_storage":              dataSourceObjectStorage(),
+			"contabo_secret":                      dataSourceSecret(),
+			"contabo_firewall":                    dataSourceFirewall(),
+			"contabo_private_network":             dataSourcePrivateNetwork(),
+			"contabo_object_storage_bucket":       dataSourceObjectStorageBucket(),
+			"contabo_tag":                         dataSourceTag(),
+			"contabo_tag_assignment":              dataSourceTagAssignment(),
+			"contabo_dns_zone":                    dataSourceDnsZone(),
+			"contabo_ptr_record":                  dataSourcePtrRecord(),
+			"contabo_instances":                   dataSourceInstances(),
+			"contabo_vip":                         dataSourceVip(),
+			"contabo_vips":                        dataSourceVips(),
+			"contabo_object_storage_credentials":  dataSourceObjectStorageCredentials(),
+			"contabo_image_stats":                 dataSourceImageStats(),
+			"contabo_instance_available_products": dataSourceInstanceAvailableProducts(),
+			"contabo_instance_vnc":                dataSourceInstanceVnc(),
+			"contabo_role":                        dataSourceRole(),
+			"contabo_api_permissions":             dataSourceApiPermissions(),
+			"contabo_users":                       dataSourceUsers(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
@@ -89,8 +105,6 @@ func providerConfigure(
 	ctx context.Context,
 	d *schema.ResourceData,
 ) (interface{}, diag.Diagnostics) {
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
 	apiUrl := d.Get("api").(string)
 	authUrl := d.Get("oauth2_token_url").(string)
 	clientId := d.Get("oauth2_client_id").(string)
@@ -98,114 +112,62 @@ func providerConfigure(
 	username := d.Get("oauth2_user").(string)
 	password := d.Get("oauth2_pass").(string)
 
+	var missing []string
+	for name, value := range map[string]string{
+		"oauth2_client_id":     clientId,
+		"oauth2_client_secret": clientSecret,
+		"oauth2_user":          username,
+		"oauth2_pass":          password,
+	} {
+		if value == "" {
+			missing = append(missing, name)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return nil, diag.Errorf(
+			"missing provider credentials: %s. Set them in the provider block or with the CNTB_OAUTH2_* environment variables",
+			strings.Join(missing, ", "),
+		)
+	}
+
 	parsedTokenUrl, err := url.ParseRequestURI(authUrl)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
-	newClient, err := client.NewClient(
-		apiUrl,
-		parsedTokenUrl.String(),
-		clientId,
-		&clientSecret,
-		username,
-		&password,
-	)
-	if err != nil {
-		return nil, diag.FromErr(err)
-	}
-
-	userId, diags = getUserId(
-		diags,
+	httpClient, err := client.BearerHttpClient(
 		parsedTokenUrl.String(),
 		clientId,
 		clientSecret,
 		username,
 		password,
 	)
-	return newClient, diags
+	if err != nil {
+		return nil, diag.FromErr(err)
+	}
+
+	userId, err := client.AccessTokenSubject(httpClient)
+	if err != nil {
+		return nil, diag.Errorf("could not determine the API user id: %s", err)
+	}
+
+	apiClient := client.NewClientWithHTTPClient(apiUrl, httpClient)
+	setProviderUserId(apiClient, userId)
+	return apiClient, nil
 }
 
-func getUserId(
-	diags diag.Diagnostics,
-	authUrl string,
-	clientId string,
-	clientSecret string,
-	username string,
-	password string,
-) (string, diag.Diagnostics) {
+// providerUserIds maps each configured API client to the Contabo user id of
+// its API user. Provider aliases may use different accounts, so the id
+// cannot be a single package variable.
+var providerUserIds sync.Map
 
-	jwtToken, diags := GetJwtToken(diags, authUrl, clientId, clientSecret, username, password)
-
-	if (JwtToken{}) == jwtToken {
-		return "", diag.FromErr(errors.New("error in getting jwt token"))
-	}
-
-	claims := jwt.MapClaims{}
-
-	_, err := jwt.ParseWithClaims(strings.TrimSpace(jwtToken.AccessToken), claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte("<YOUR VERIFICATION KEY>"), nil
-	})
-
-	if err != nil {
-		//TODO This throws an error but in the cntb we just ignoring it... :)
-		// return "", diag.FromErr(err)
-	}
-
-	if claims["sub"] == nil {
-		return "", diag.FromErr(errors.New("error in getting access token"))
-	}
-	return claims["sub"].(string), diags
+func setProviderUserId(apiClient *openapi.APIClient, userId string) {
+	providerUserIds.Store(apiClient, userId)
 }
 
-type JwtToken struct {
-	AccessToken      string `json:"access_token"`
-	ExpiresIn        int64  `json:"expires_in"`
-	RefreshExpiresIn int64  `json:"refresh_expires_in"`
-	RefreshToken     string `json:"refresh_token"`
-	TokenType        string `json:"token_type"`
-	NotBeforePolicy  int64  `json:"not-before-policy"`
-	SessionState     string `json:"session_state"`
-	Scope            string `json:"scope"`
-}
-
-func GetJwtToken(
-	diags diag.Diagnostics,
-	authUrl string,
-	clientId string,
-	clientSecret string,
-	username string,
-	password string,
-) (JwtToken, diag.Diagnostics) {
-	var jwtToken JwtToken
-
-	urlEncodedUsername := url.QueryEscape(username)
-	urlEncodedPassword := url.QueryEscape(password)
-
-	payload := strings.NewReader("client_id=" + clientId + "&client_secret=" + clientSecret + "&username=" + urlEncodedUsername + "&password=" + urlEncodedPassword + "&grant_type=password")
-
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", authUrl, payload)
-
-	if err != nil {
-		return jwtToken, diag.FromErr(err)
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	res, err := client.Do(req)
-	if err != nil {
-		return jwtToken, diag.FromErr(err)
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return jwtToken, diag.FromErr(err)
-	}
-
-	if err := json.Unmarshal(body, &jwtToken); err != nil {
-		return jwtToken, diag.FromErr(err)
-	}
-
-	return jwtToken, diags
+func providerUserId(apiClient *openapi.APIClient) string {
+	userId, _ := providerUserIds.Load(apiClient)
+	s, _ := userId.(string)
+	return s
 }
