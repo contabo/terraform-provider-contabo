@@ -121,7 +121,10 @@ func resourceTagAssignmentRead(
 		RetrieveAssignment(context.Background(), tagId, resourceType, resourceId).
 		XRequestId(uuid.NewV4().String()).Execute()
 	if err != nil {
-		return HandleResponseErrors(diags, httpResp)
+		if removeFromStateIfNotFound(d, httpResp) {
+			return nil
+		}
+		return apiErrorDiags(httpResp, err)
 	}
 
 	if len(res.Data) == 0 {

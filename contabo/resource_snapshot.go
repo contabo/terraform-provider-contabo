@@ -116,7 +116,10 @@ func resourceSnapshotRead(ctx context.Context, d *schema.ResourceData, m interfa
 		Execute()
 
 	if err != nil {
-		return HandleResponseErrors(diags, httpResp)
+		if removeFromStateIfNotFound(d, httpResp) {
+			return nil
+		}
+		return apiErrorDiags(httpResp, err)
 	} else if len(res.Data) != 1 {
 		return MultipleDataObjectsError(diags)
 	}
