@@ -50,9 +50,13 @@ func BearerHttpClient(
 		return nil, err
 	}
 
-	httpClient := configuration.Client(ctx, token)
-	httpClient.Transport = &retryRoundTripper{base: httpClient.Transport}
-	return httpClient, nil
+	// Retries run below the OAuth2 transport (as its base client), so the
+	// returned client's Transport stays an *oauth2.Transport and every retry
+	// carries a valid token.
+	retryCtx := context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+		Transport: &retryRoundTripper{},
+	})
+	return configuration.Client(retryCtx, token), nil
 }
 
 func cacheToken(token *oauth2.Token) error {

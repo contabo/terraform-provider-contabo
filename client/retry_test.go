@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mitchellh/go-homedir"
+	"golang.org/x/oauth2"
 )
 
 // newTestClient starts a fake API that answers with the given statuses in
@@ -60,5 +61,13 @@ func TestRetry_PostNotRetriedOn5xx(t *testing.T) {
 	}
 	if resp.StatusCode != 500 || *hits != 1 {
 		t.Fatalf("want 500 after 1 call, got %d after %d", resp.StatusCode, *hits)
+	}
+}
+
+// Code that reads the token type-asserts the transport to *oauth2.Transport.
+func TestRetry_KeepsOAuth2Transport(t *testing.T) {
+	c, _, _ := newTestClient(t, 200)
+	if _, ok := c.Transport.(*oauth2.Transport); !ok {
+		t.Fatalf("transport must stay *oauth2.Transport, got %T", c.Transport)
 	}
 }
