@@ -223,7 +223,7 @@ func resourceInstance() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeInt},
 				Optional:    true,
 				Computed:    true,
-				Description: "Set of private network IDs to attach to this instance. The instance will be automatically provisioned with the necessary virtual network interfaces.",
+				Description: "CAUTION: Attaching an existing instance to a private network will most likely reinstall your server! Set of private network IDs to attach to this instance. The instance will be automatically provisioned with the necessary virtual network interfaces.",
 			},
 			"license": {
 				Type:        schema.TypeString,
