@@ -222,6 +222,7 @@ func resourceInstance() *schema.Resource {
 				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeInt},
 				Optional:    true,
+				Computed:    true,
 				Description: "Set of private network IDs to attach to this instance. The instance will be automatically provisioned with the necessary virtual network interfaces.",
 			},
 			"license": {
@@ -384,13 +385,32 @@ func resourceInstanceRead(ctx context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	instance, diag := pollInstanceInstalled(diags, client, ctx, instanceId)
+	instance, pollDiags := pollInstanceInstalled(diags, client, ctx, instanceId)
 
 	if err != nil || instance == nil {
-		return append(diags, diag...)
+		return append(diags, pollDiags...)
 	}
 
-	return AddInstanceToData(*instance, d, diags)
+	if resDiags := AddInstanceToData(*instance, d, diags); len(resDiags) > 0 {
+		return resDiags
+	}
+
+	if pnIds, ok := d.GetOk("private_network_ids"); ok {
+		pnSet := pnIds.(*schema.Set).List()
+		var activePnIds []int
+		for _, id := range pnSet {
+			pnId := int64(id.(int))
+			status, err := getInstancePrivateNetworkStatus(ctx, client, pnId, instanceId)
+			if err == nil && status == "ok" {
+				activePnIds = append(activePnIds, int(pnId))
+			}
+		}
+		if err := d.Set("private_network_ids", activePnIds); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	return diags
 }
 
 func resourceInstanceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
