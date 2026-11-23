@@ -57,6 +57,7 @@ func resourcePrivateNetwork() *schema.Resource {
 				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeInt},
 				Optional:    true,
+				Computed:    true,
 				Description: "Add the instace Ids to the private network here. If you do not add any instance Ids an empty private network will be created.",
 			},
 			"instances": {
@@ -318,11 +319,14 @@ func resourcePrivateNetworkUpdate(
 	}
 
 	if d.HasChange("instance_ids") {
-		rsltDiag := handlePrivateNetworkInstanceChanges(diags, d, client, privateNetworkId)
-		if rsltDiag != nil {
-			return rsltDiag
+		// Only manage instance_ids from the network resource if explicitly provided in configuration
+		if _, ok := d.GetOk("instance_ids"); ok {
+			rsltDiag := handlePrivateNetworkInstanceChanges(diags, d, client, privateNetworkId)
+			if rsltDiag != nil {
+				return rsltDiag
+			}
+			anyChange = true
 		}
-		anyChange = true
 	}
 
 	if anyChange {
