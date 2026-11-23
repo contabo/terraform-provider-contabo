@@ -50,7 +50,9 @@ func BearerHttpClient(
 		return nil, err
 	}
 
-	return configuration.Client(ctx, token), nil
+	httpClient := configuration.Client(ctx, token)
+	httpClient.Transport = &retryRoundTripper{base: httpClient.Transport}
+	return httpClient, nil
 }
 
 func cacheToken(token *oauth2.Token) error {
