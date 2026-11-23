@@ -201,7 +201,6 @@ func resourceInstance() *schema.Resource {
 						},
 					},
 				},
-
 			},
 			"error_message": {
 				Type:        schema.TypeString,
@@ -884,5 +883,3 @@ func buildReinstallRequest(d *schema.ResourceData) *openapi.ReinstallInstanceReq
 
 	return req
 }
-
-
